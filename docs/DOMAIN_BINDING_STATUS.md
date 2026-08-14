@@ -1,16 +1,25 @@
 # Custom Domain Status — `turkmenai.tech`
 
-**Checked:** 2026-08-14
+**Updated:** 2026-08-14
 
-The domain is registered and active at Namecheap under **Namecheap BasicDNS**. Before it can serve TurkmenAI Local, the existing HTTP redirect must be removed and replaced with the precise DNS records provided by the hosting platform.
+Hosting moved from the Manus preview (`turkmenai-lxyvv4qu.manus.space`) to **GitHub Pages**, built by `.github/workflows/pages.yml` from `client/`. This removes the earlier blocker ("waiting for platform custom-domain access") because GitHub Pages custom-domain records are public and fixed — see [`DOMAIN_SETUP.md`](../DOMAIN_SETUP.md) for the exact records.
 
-No nameservers, contact data, payment information, or DNS records were changed during this review. The public site remains available at `https://turkmenai-lxyvv4qu.manus.space`.
+## Repository-side configuration (done)
 
-## Required next actions
+- GitHub Pages enabled, `build_type: workflow`, source branch `main`.
+- Pages `cname` set to `turkmenai.tech` via the repository's Pages API settings.
+- `client/public/CNAME` committed with `turkmenai.tech` so every Actions build ships the file GitHub Pages needs.
+- `vite.config.ts` `base` fixed to `/` (previously `/turkmenai-local/`, which only makes sense for the `username.github.io/repo` path, not an apex custom domain).
+- Latest `pages.yml` run: **success** (build + deploy).
 
-| Step | Owner | Safety condition |
-|---|---|---|
-| Add `turkmenai.tech` in the project’s custom-domain settings | Account owner | Requires a plan with custom-domain access. |
-| Obtain the platform-issued apex and `www` DNS records | Platform | Do not guess A/CNAME targets. |
-| Remove the existing Namecheap HTTP redirect and add only the issued records | Registrar owner | Obtain explicit confirmation immediately before saving. |
-| Verify certificate issuance and HTTPS on apex and `www` | Project owner / release process | Allow DNS propagation before declaring the domain live. |
+## Outstanding (owner action, Namecheap)
+
+Add the DNS records listed in `DOMAIN_SETUP.md` under `turkmenai.tech → Advanced DNS`, and remove the existing URL redirect. No nameserver change, no DNS API token, and no Namecheap login is available to this environment — this step must be done manually in the Namecheap dashboard.
+
+## Verification after DNS propagates
+
+```bash
+curl -I https://turkmenai.tech
+curl -I https://www.turkmenai.tech
+```
+Then confirm in **GitHub → repo → Settings → Pages** that it shows "DNS check successful" and enable **Enforce HTTPS**.
