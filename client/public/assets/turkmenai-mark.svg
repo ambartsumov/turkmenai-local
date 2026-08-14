@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title>TurkmenAI Local mark, dark</title>
+  <path fill="#081723" d="M8 22 64 4l56 18v84l-56 18-56-18z"/>
+  <path fill="#31D8C7" d="M20 82 52 50l12 12 23-23 16 16v20L87 59 64 82 52 70 31 91z"/>
+  <path fill="#D9C6A4" d="m64 16 38 12v9L64 25 26 37v-9z" opacity=".88"/>
+  <circle cx="64" cy="82" r="7" fill="#31D8C7"/>
+</svg>
