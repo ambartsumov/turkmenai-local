@@ -86,3 +86,9 @@
 - [ ] Запускать и фиксировать только реальные desktop/runtime user flows; не создавать скриншоты или модельные данные, имитирующие несуществующие функции.
 - [ ] Добавить реальные release manifests, checksums и платформенные статусы, не публикуя несуществующие артефакты.
 - [ ] Создать или обновить GitHub-репозиторий, release assets и документацию только после успешной верификации кода и доступных прав.
+
+## GitHub Pages publication
+
+- [ ] Add a GitHub Pages workflow that builds the existing public website from `client/` and uploads only the static site artifact.
+- [ ] Enable Pages for `ambartsumov/turkmenai-local` using GitHub Actions as the deployment source.
+- [ ] Verify the generated `github.io` URL, navigation, favicon and real Linux download links before presenting it as live.
