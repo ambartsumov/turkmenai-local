@@ -2,7 +2,7 @@
 //! Default binding is loopback only; LAN exposure and cloud inference are deliberately outside this crate.
 
 use axum::{
-    extract::State,
+    extract::{Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::{get, post},
@@ -15,6 +15,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 use turkmenai_core::{
+    catalog::Catalog,
     llama::{LlamaHealth, LlamaServerEndpoint},
     runtime::{discover_llama_server, RuntimeRecord, RuntimeSupervisor},
     state::{default_data_root, RuntimeConfig},
@@ -121,6 +122,16 @@ pub fn router(state: ApiState) -> Router {
         .route("/api/v1/capabilities", get(capabilities))
         .route("/api/v1/analyze", post(analyze))
         .route("/api/v1/plan", post(plan))
+        .route("/api/v1/catalog", get(catalog))
+        .route(
+            "/api/v1/catalog/recommendations",
+            get(catalog_recommendations),
+        )
+        .route("/api/v1/datasets", get(datasets))
+        .route(
+            "/api/v1/datasets/recommendations",
+            get(dataset_recommendations),
+        )
         .route(
             "/api/v1/runtime",
             get(runtime_status).post(activate_external_runtime),
@@ -143,6 +154,79 @@ async fn hardware() -> Json<HardwareProfile> {
 }
 async fn capabilities(State(state): State<ApiState>) -> Json<BackendCapabilityRegistry> {
     Json((*state.registry).clone())
+}
+
+#[derive(Debug, Deserialize)]
+struct CatalogQuery {
+    objective: Option<String>,
+    /// When true, pull the live catalog from the repository before ranking.
+    #[serde(default)]
+    refresh: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct RecommendationsResponse {
+    source: turkmenai_core::catalog::CatalogSource,
+    categories: Vec<turkmenai_core::catalog::ModelCategory>,
+    recommendations: Vec<turkmenai_core::catalog::Recommendation>,
+}
+
+async fn catalog(
+    Query(query): Query<CatalogQuery>,
+) -> Json<turkmenai_core::catalog::CatalogSnapshot> {
+    // A non-refresh call must never touch the network (offline-first).
+    Json(Catalog::resolve(query.refresh))
+}
+
+async fn catalog_recommendations(
+    Query(query): Query<CatalogQuery>,
+) -> Json<RecommendationsResponse> {
+    let hardware = HardwareProfile::detect();
+    let objective = parse_objective(query.objective.as_deref());
+    let refresh = query.refresh;
+    let snapshot = tokio::task::spawn_blocking(move || Catalog::resolve(refresh))
+        .await
+        .unwrap_or_else(|_| turkmenai_core::catalog::CatalogSnapshot {
+            source: turkmenai_core::catalog::CatalogSource::Builtin,
+            catalog: Catalog::builtin(),
+        });
+    Json(RecommendationsResponse {
+        source: snapshot.source,
+        categories: snapshot.catalog.categories(),
+        recommendations: snapshot.catalog.recommend(&hardware, objective),
+    })
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct DatasetsResponse {
+    source: turkmenai_core::datasets::DatasetSource,
+    categories: Vec<turkmenai_core::datasets::DatasetCategory>,
+    datasets: Vec<turkmenai_core::datasets::DatasetEvaluation>,
+}
+
+async fn datasets(
+    Query(query): Query<CatalogQuery>,
+) -> Json<turkmenai_core::datasets::DatasetSnapshot> {
+    Json(turkmenai_core::datasets::DatasetCatalog::resolve(
+        query.refresh,
+    ))
+}
+
+async fn dataset_recommendations(Query(query): Query<CatalogQuery>) -> Json<DatasetsResponse> {
+    let hardware = HardwareProfile::detect();
+    let snapshot = tokio::task::spawn_blocking(move || {
+        turkmenai_core::datasets::DatasetCatalog::resolve(query.refresh)
+    })
+    .await
+    .unwrap_or_else(|_| turkmenai_core::datasets::DatasetSnapshot {
+        source: turkmenai_core::datasets::DatasetSource::Builtin,
+        catalog: turkmenai_core::datasets::DatasetCatalog::builtin(),
+    });
+    Json(DatasetsResponse {
+        source: snapshot.source,
+        categories: snapshot.catalog.categories(),
+        datasets: snapshot.catalog.evaluate_all(&hardware),
+    })
 }
 
 async fn analyze(
@@ -490,6 +574,27 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn catalog_recommendations_never_include_unsupported() {
+        let response = router(ApiState::default())
+            .oneshot(
+                Request::get("/api/v1/catalog/recommendations?objective=balanced")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = axum::body::to_bytes(response.into_body(), 1 << 20)
+            .await
+            .unwrap();
+        let body: RecommendationsResponse = serde_json::from_slice(&bytes).unwrap();
+        assert!(body
+            .recommendations
+            .iter()
+            .all(|rec| rec.fit != turkmenai_core::catalog::FitLevel::Unsupported));
     }
 
     #[tokio::test]

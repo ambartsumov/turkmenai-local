@@ -40,3 +40,31 @@ export function getRuntimeHealth(): Promise<RuntimeStatus | null> {
 export function stopRuntime(): Promise<RuntimeStatus | null> {
   return invokeRuntime<RuntimeStatus>("runtime_stop");
 }
+
+// ---- Catalog (models) & datasets, discovered from Hugging Face -------------
+
+export type FitLevel = "excellent" | "good" | "usable" | "slow" | "unsupported";
+export type ModelCategory = "chat" | "reasoning" | "code" | "translation" | "multilingual" | "vision" | "speech_recognition" | "speech_synthesis" | "embeddings";
+export type CatalogSource = "remote" | "cache" | "builtin";
+
+export type CatalogModel = { id: string; name: string; repo: string; revision: string; file: string; sha256: string | null; license: string; task: string; category: ModelCategory; format: string; params_b: number; quant: string; download_mib: number; min_ram_mib: number; rec_ram_mib: number; context: number; trust: string; tags: string[]; description: Record<string, string> };
+export type Recommendation = { model: CatalogModel; fit: FitLevel; download_url: string; estimated_ram_mib: number; fits_disk: boolean; gpu_accelerated: boolean; reasons: string[] };
+export type RecommendationsResult = { source: CatalogSource; categories: ModelCategory[]; recommendations: Recommendation[] };
+
+export type DatasetFit = "fits" | "tight" | "unsupported";
+export type DatasetCategory = "instruction" | "chat" | "code" | "reasoning" | "translation" | "summarization" | "classification" | "multilingual" | "speech" | "embeddings";
+export type DatasetRecord = { id: string; name: string; repo: string; revision: string; category: DatasetCategory; license: string; languages: string[]; download_mib: number; unpacked_mib: number; num_examples: number; risk: string; description: Record<string, string> };
+export type DatasetEvaluation = { dataset: DatasetRecord; fit: DatasetFit; required_disk_mib: number; page_url: string; reasons: string[] };
+export type DatasetsResult = { source: CatalogSource; categories: DatasetCategory[]; datasets: DatasetEvaluation[] };
+
+export function getCatalogRecommendations(objective?: string, refresh = false): Promise<RecommendationsResult | null> {
+  return invokeRuntime<RecommendationsResult>("catalog_recommendations", { objective: objective ?? null, refresh });
+}
+
+export function getCatalogAll(refresh = false): Promise<Recommendation[] | null> {
+  return invokeRuntime<Recommendation[]>("catalog_all", { refresh });
+}
+
+export function getDatasetRecommendations(refresh = false): Promise<DatasetsResult | null> {
+  return invokeRuntime<DatasetsResult>("dataset_recommendations", { refresh });
+}

@@ -2,8 +2,9 @@
 
 use std::{collections::BTreeSet, process::ExitCode};
 use turkmenai_core::{
-    state::AppStateStore, BackendCapabilityRegistry, ExecutionPlanner, HardwareProfile,
-    ModelDoctor, ModelExecutionGraph, ModelFormat, ModelResolver, Objective,
+    catalog::Catalog, datasets::DatasetCatalog, state::AppStateStore, BackendCapabilityRegistry,
+    ExecutionPlanner, HardwareProfile, ModelDoctor, ModelExecutionGraph, ModelFormat,
+    ModelResolver, Objective,
 };
 
 fn print_json<T: serde::Serialize>(value: &T) -> Result<(), String> {
@@ -13,7 +14,7 @@ fn print_json<T: serde::Serialize>(value: &T) -> Result<(), String> {
 }
 
 fn usage() {
-    eprintln!("TurkmenAI Local CLI\n\nUsage:\n  tmai hardware\n  tmai analyze <model-source>\n  tmai validate-model <model-source>\n  tmai plan <model-source> [balanced|fastest|quality|ram|vram|download]\n  tmai doctor <model-source>\n  tmai capabilities\n  tmai migrate [state-dir]\n  tmai backup-config [state-dir]\n  tmai restore-config <backup-file> [state-dir]\n  tmai models export-list [state-dir]\n  tmai support [state-dir]\n  tmai server [port]\n\nRuntime installation and inference require an explicit verified runtime/model configuration; no repository code is executed automatically.");
+    eprintln!("TurkmenAI Local CLI\n\nUsage:\n  tmai hardware\n  tmai analyze <model-source>\n  tmai validate-model <model-source>\n  tmai plan <model-source> [balanced|fastest|quality|ram|vram|download]\n  tmai doctor <model-source>\n  tmai capabilities\n  tmai catalog [balanced|fastest|quality|ram|vram|download|all]\n  tmai catalog-refresh   (discover live models from Hugging Face)\n  tmai datasets\n  tmai datasets-refresh  (discover live datasets from Hugging Face)\n  tmai migrate [state-dir]\n  tmai backup-config [state-dir]\n  tmai restore-config <backup-file> [state-dir]\n  tmai models export-list [state-dir]\n  tmai support [state-dir]\n  tmai server [port]\n\nRuntime installation and inference require an explicit verified runtime/model configuration; no repository code is executed automatically.");
 }
 
 fn state_store(argument: Option<&String>) -> Result<AppStateStore, String> {
@@ -38,6 +39,25 @@ fn main() -> ExitCode {
     let result = match args.first().map(String::as_str) {
         Some("hardware") => print_json(&HardwareProfile::detect()),
         Some("capabilities") => print_json(&BackendCapabilityRegistry::with_builtin()),
+        Some("catalog") => {
+            let hardware = HardwareProfile::detect();
+            let catalog = Catalog::builtin();
+            if args.get(1).map(String::as_str) == Some("all") {
+                print_json(&catalog.evaluate_all(&hardware))
+            } else {
+                print_json(&catalog.recommend(&hardware, objective(args.get(1))))
+            }
+        }
+        Some("catalog-refresh") => Catalog::fetch_remote()
+            .map_err(|error| error.to_string())
+            .and_then(|catalog| print_json(&catalog.recommend(&HardwareProfile::detect(), Objective::Balanced))),
+        Some("datasets") => {
+            let hardware = HardwareProfile::detect();
+            print_json(&DatasetCatalog::builtin().evaluate_all(&hardware))
+        }
+        Some("datasets-refresh") => DatasetCatalog::fetch_remote()
+            .map_err(|error| error.to_string())
+            .and_then(|catalog| print_json(&catalog.evaluate_all(&HardwareProfile::detect()))),
         Some("migrate") => state_store(args.get(1)).and_then(|store| store.load().map_err(|error| error.to_string())).and_then(|state| print_json(&state)),
         Some("backup-config") => state_store(args.get(1)).and_then(|store| store.backup_config().map_err(|error| error.to_string())).and_then(|path| print_json(&serde_json::json!({"backup": path}))),
         Some("restore-config") => match args.get(1) {

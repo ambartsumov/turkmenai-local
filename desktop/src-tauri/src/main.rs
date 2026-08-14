@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 use std::{collections::BTreeSet, path::PathBuf, sync::Mutex};
 use tauri::Manager;
 use turkmenai_core::{
+    catalog::{Catalog, CatalogSnapshot, Recommendation},
+    datasets::{DatasetCatalog, DatasetEvaluation, DatasetSnapshot},
     llama::{LlamaHealth, LlamaServerEndpoint},
     runtime::{discover_llama_server, RuntimeRecord, RuntimeSupervisor},
     state::{AppStateStore, RuntimeConfig},
@@ -108,6 +110,56 @@ fn plan(request: PlanRequest) -> Result<Vec<turkmenai_core::ExecutionPlan>, Stri
         &HardwareProfile::detect(),
         objective(request.objective.as_deref()),
     ))
+}
+
+#[derive(Serialize)]
+struct RecommendationsResult {
+    source: turkmenai_core::catalog::CatalogSource,
+    categories: Vec<turkmenai_core::catalog::ModelCategory>,
+    recommendations: Vec<Recommendation>,
+}
+
+/// Recommend models for this computer. `refresh` pulls the live Hugging Face
+/// catalog first; otherwise the cached/embedded catalog is used (offline-first).
+#[tauri::command]
+fn catalog_recommendations(
+    objective: Option<String>,
+    refresh: Option<bool>,
+) -> RecommendationsResult {
+    let snapshot: CatalogSnapshot = Catalog::resolve(refresh.unwrap_or(false));
+    RecommendationsResult {
+        source: snapshot.source,
+        categories: snapshot.catalog.categories(),
+        recommendations: snapshot.catalog.recommend(
+            &HardwareProfile::detect(),
+            self::objective(objective.as_deref()),
+        ),
+    }
+}
+
+/// Every catalog model with an honest fit verdict (including incompatible ones).
+#[tauri::command]
+fn catalog_all(refresh: Option<bool>) -> Vec<Recommendation> {
+    Catalog::resolve(refresh.unwrap_or(false))
+        .catalog
+        .evaluate_all(&HardwareProfile::detect())
+}
+
+#[derive(Serialize)]
+struct DatasetsResult {
+    source: turkmenai_core::datasets::DatasetSource,
+    categories: Vec<turkmenai_core::datasets::DatasetCategory>,
+    datasets: Vec<DatasetEvaluation>,
+}
+
+#[tauri::command]
+fn dataset_recommendations(refresh: Option<bool>) -> DatasetsResult {
+    let snapshot: DatasetSnapshot = DatasetCatalog::resolve(refresh.unwrap_or(false));
+    DatasetsResult {
+        source: snapshot.source,
+        categories: snapshot.catalog.categories(),
+        datasets: snapshot.catalog.evaluate_all(&HardwareProfile::detect()),
+    }
 }
 
 fn runtime_status(manager: &RuntimeManager, config: RuntimeConfig) -> RuntimeStatus {
@@ -223,6 +275,9 @@ fn main() {
             hardware,
             desktop_status,
             plan,
+            catalog_recommendations,
+            catalog_all,
+            dataset_recommendations,
             runtime_discover,
             runtime_start,
             runtime_health,
