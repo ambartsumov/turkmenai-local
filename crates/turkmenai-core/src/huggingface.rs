@@ -31,6 +31,7 @@ struct HfModelRow {
     #[serde(alias = "modelId")]
     id: String,
     #[serde(default)]
+    #[allow(dead_code)]
     downloads: u64,
     #[serde(default)]
     tags: Vec<String>,
@@ -195,6 +196,7 @@ const DATASETS_SERVER: &str = "https://datasets-server.huggingface.co";
 struct HfDatasetRow {
     id: String,
     #[serde(default)]
+    #[allow(dead_code)]
     downloads: u64,
     #[serde(default)]
     tags: Vec<String>,
@@ -215,6 +217,7 @@ struct HfSizeInner {
     #[serde(default)]
     num_bytes_parquet_files: u64,
     #[serde(default)]
+    #[allow(dead_code)]
     num_rows: u64,
 }
 
@@ -438,7 +441,7 @@ fn map_dataset(
 /// Pick the artifact a beginner should get: prefer a balanced `Q4_K_M`, then any
 /// `Q4`, otherwise the smallest single-file GGUF. Sharded GGUF (`-00001-of-`) is
 /// skipped for the starter flow.
-pub fn pick_gguf(files: &[HfTreeEntry]) -> Option<&HfTreeEntry> {
+fn pick_gguf(files: &[HfTreeEntry]) -> Option<&HfTreeEntry> {
     let ggufs: Vec<&HfTreeEntry> = files
         .iter()
         .filter(|entry| entry.kind == "file")
@@ -458,7 +461,7 @@ pub fn pick_gguf(files: &[HfTreeEntry]) -> Option<&HfTreeEntry> {
 }
 
 /// Read a license id from Hub `license:*` tags. Honest fallback when absent.
-pub fn parse_license(tags: &[String]) -> String {
+fn parse_license(tags: &[String]) -> String {
     tags.iter()
         .find_map(|tag| tag.strip_prefix("license:"))
         .map(|value| value.to_string())
@@ -467,7 +470,7 @@ pub fn parse_license(tags: &[String]) -> String {
 
 /// Estimate parameter count in billions from the repo id, e.g. `...-3B-...` → 3.0,
 /// `...-0.5B-...` → 0.5. Returns 0.0 when no size token is present.
-pub fn parse_params_b(id: &str) -> f32 {
+fn parse_params_b(id: &str) -> f32 {
     let lower = id.to_ascii_lowercase();
     let bytes = lower.as_bytes();
     let mut best = 0.0f32;
@@ -519,7 +522,7 @@ fn trust_for(id: &str) -> TrustLevel {
 
 /// Map one Hub row plus its file list into a normalized catalog entry, or `None`
 /// when the repo has no usable single-file GGUF.
-pub fn map_model(
+fn map_model(
     row: &HfModelRow,
     files: &[HfTreeEntry],
     category: ModelCategory,
