@@ -5,7 +5,7 @@ import { useState } from "react";
 import { copy, type Language } from "@/i18n";
 
 const SUPPORT_ADDRESS = "0x6841c694ed117bf02b7ab7acd75d4e235302fdda";
-const RELEASE_BASE = "https://github.com/ambartsumov/turkmenai-local/releases/latest/download";
+const RELEASE_BASE = "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.1.0";
 const ACTIONS_URL = "https://github.com/ambartsumov/turkmenai-local/actions";
 
 function LanguageSwitch({ language, setLanguage }: { language: Language; setLanguage: (value: Language) => void }) {
@@ -16,8 +16,9 @@ function SignalLogo() { return <img className="brand-mark" src="/manus-storage/t
 
 function DownloadMatrix({ t }: { t: Record<string, string> }) {
   const targets = [
-    { os: t.linux, arch: "x64", packageName: t.appImage, status: "verified", url: `${RELEASE_BASE}/TurkmenAI%20Local_0.1.0_amd64.AppImage` },
-    { os: t.linux, arch: "x64", packageName: "DEB / RPM", status: "verified", url: `${RELEASE_BASE}/TurkmenAI%20Local_0.1.0_amd64.deb` },
+    { os: t.linux, arch: "x64", packageName: t.appImage, status: "verified", url: `${RELEASE_BASE}/TurkmenAI-Local-Linux-x64.AppImage` },
+    { os: "Debian / Ubuntu", arch: "x64", packageName: "DEB", status: "verified", url: `${RELEASE_BASE}/TurkmenAI-Local-Linux-x64.deb` },
+    { os: "Fedora / RHEL", arch: "x64", packageName: "RPM", status: "verified", url: `${RELEASE_BASE}/TurkmenAI-Local-Linux-x64.rpm` },
     { os: t.windows, arch: "x64", packageName: "NSIS / MSI", status: "ci" },
     { os: t.windows, arch: "ARM64", packageName: "NSIS / MSI", status: "ci" },
     { os: t.linux, arch: "ARM64", packageName: t.appImage, status: "ci" },
