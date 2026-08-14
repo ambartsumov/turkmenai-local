@@ -10,7 +10,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-pub const APP_STATE_SCHEMA_VERSION: u32 = 1;
+pub const APP_STATE_SCHEMA_VERSION: u32 = 2;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -39,12 +39,36 @@ pub struct AppSettings {
 impl Default for AppSettings {
     fn default() -> Self {
         Self {
-            language: "ru".into(),
+            language: "en".into(),
             api_port: 8742,
             telemetry_enabled: false,
             lan_sharing_enabled: false,
             update_channel: "stable".into(),
             model_store: default_data_root().join("models").display().to_string(),
+        }
+    }
+}
+
+/// Persisted configuration for an explicit local llama-server. Hostnames are deliberately absent:
+/// all runtime traffic is bound to 127.0.0.1 by the shell and adapter.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct RuntimeConfig {
+    pub executable_path: Option<String>,
+    pub model_path: Option<String>,
+    pub port: u16,
+    pub context_size: u32,
+    pub gpu_layers: i32,
+}
+
+impl Default for RuntimeConfig {
+    fn default() -> Self {
+        Self {
+            executable_path: None,
+            model_path: None,
+            port: 8080,
+            context_size: 4096,
+            gpu_layers: 0,
         }
     }
 }
@@ -61,6 +85,8 @@ pub struct InstalledModelRecord {
 pub struct AppState {
     pub schema_version: u32,
     pub settings: AppSettings,
+    #[serde(default)]
+    pub runtime: RuntimeConfig,
     pub models: BTreeMap<String, InstalledModelRecord>,
 }
 
@@ -69,6 +95,7 @@ impl Default for AppState {
         Self {
             schema_version: APP_STATE_SCHEMA_VERSION,
             settings: AppSettings::default(),
+            runtime: RuntimeConfig::default(),
             models: BTreeMap::new(),
         }
     }
@@ -121,6 +148,10 @@ impl AppStateStore {
             if value.get("models").is_none() {
                 value["models"] = serde_json::json!({});
             }
+        }
+        if version < 2 && value.get("runtime").is_none() {
+            value["runtime"] = serde_json::to_value(RuntimeConfig::default())
+                .map_err(|error| CoreError::UnsupportedSource(error.to_string()))?;
         }
         let mut state: AppState = serde_json::from_value(value)
             .map_err(|error| CoreError::UnsupportedSource(format!("STATE_CORRUPTED: {error}")))?;
@@ -176,7 +207,6 @@ pub fn default_data_root() -> PathBuf {
         .unwrap_or_else(std::env::temp_dir)
         .join("TurkmenAILocal")
 }
-
 fn now_millis() -> u128 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -196,6 +226,7 @@ mod tests {
         let migrated = store.load().unwrap();
         assert_eq!(migrated.schema_version, APP_STATE_SCHEMA_VERSION);
         assert!(!migrated.settings.telemetry_enabled);
+        assert_eq!(migrated.runtime.port, 8080);
     }
 
     #[test]

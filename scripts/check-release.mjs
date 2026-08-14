@@ -7,14 +7,24 @@ const requiredIcons = ['desktop/src-tauri/icons/icon.png', 'desktop/src-tauri/ic
 for (const icon of requiredIcons) if (!fs.existsSync(path.join(root, icon))) throw new Error(`Missing release icon: ${icon}`);
 const html = fs.readFileSync(path.join(root, 'client/index.html'), 'utf8');
 if (!html.includes('/manus-storage/turkmenai-logo-symbol_d3087e01.png')) throw new Error('Missing external web favicon asset reference');
-const artifacts = [
-  'target/release/bundle/deb/TurkmenAI Local_0.1.0_amd64.deb',
-  'target/release/bundle/rpm/TurkmenAI Local-0.1.0-1.x86_64.rpm',
-  'target/release/bundle/appimage/TurkmenAI Local_0.1.0_amd64.AppImage',
-];
+
+function collect(directory) {
+  if (!fs.existsSync(directory)) return [];
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const absolute = path.join(directory, entry.name);
+    return entry.isDirectory() ? collect(absolute) : [absolute];
+  });
+}
+
+const bundleRoot = path.join(root, 'target', 'release', 'bundle');
+const artifacts = collect(bundleRoot).filter((file) => /\.(deb|rpm|appimage|msi|exe|dmg)$/i.test(file));
+if (artifacts.length === 0) throw new Error('Missing native artifacts under target/release/bundle.');
+const expected = process.platform === 'linux' ? ['.deb', '.rpm', '.appimage'] : process.platform === 'win32' ? ['.msi', '.exe'] : process.platform === 'darwin' ? ['.dmg'] : [];
+for (const extension of expected) {
+  if (!artifacts.some((artifact) => artifact.toLowerCase().endsWith(extension))) throw new Error(`Missing ${extension} native artifact for ${process.platform}.`);
+}
 for (const artifact of artifacts) {
-  const absolute = path.join(root, artifact);
-  if (!fs.existsSync(absolute)) throw new Error(`Missing native artifact: ${artifact}`);
-  const sum = crypto.createHash('sha256').update(fs.readFileSync(absolute)).digest('hex');
-  console.log(`${sum}  ${artifact}`);
+  const relative = path.relative(root, artifact).split(path.sep).join('/');
+  const sum = crypto.createHash('sha256').update(fs.readFileSync(artifact)).digest('hex');
+  console.log(`${sum}  ${relative}`);
 }

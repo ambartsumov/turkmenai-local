@@ -12,6 +12,7 @@ use thiserror::Error;
 use url::Url;
 
 pub mod download;
+pub mod llama;
 pub mod runtime;
 pub mod state;
 pub mod store;
@@ -26,6 +27,8 @@ pub enum CoreError {
     MissingPath(String),
     #[error("I/O failed: {0}")]
     Io(#[from] std::io::Error),
+    #[error("local runtime failed: {0}")]
+    Runtime(String),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

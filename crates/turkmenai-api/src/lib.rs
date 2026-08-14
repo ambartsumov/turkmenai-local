@@ -1,5 +1,5 @@
 //! Local API surface shared by the desktop shell, CLI and future web control panel.
-//! Default binding is loopback only; LAN exposure is deliberately outside this crate.
+//! Default binding is loopback only; LAN exposure and cloud inference are deliberately outside this crate.
 
 use axum::{
     extract::State,
@@ -9,20 +9,47 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use std::{net::SocketAddr, sync::Arc};
+use std::{
+    net::SocketAddr,
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
 use turkmenai_core::{
+    llama::{LlamaHealth, LlamaServerEndpoint},
+    runtime::{discover_llama_server, RuntimeRecord, RuntimeSupervisor},
+    state::{default_data_root, RuntimeConfig},
     BackendCapabilityRegistry, ExecutionPlanner, HardwareProfile, ModelResolver, Objective,
 };
+
+const LLAMA_RUNTIME_ID: &str = "llama-server";
+
+struct ApiRuntime {
+    supervisor: RuntimeSupervisor,
+    endpoint: Option<LlamaServerEndpoint>,
+    config: Option<RuntimeConfig>,
+}
+
+impl Default for ApiRuntime {
+    fn default() -> Self {
+        Self {
+            supervisor: RuntimeSupervisor::default(),
+            endpoint: None,
+            config: None,
+        }
+    }
+}
 
 #[derive(Clone)]
 pub struct ApiState {
     registry: Arc<BackendCapabilityRegistry>,
+    runtime: Arc<Mutex<ApiRuntime>>,
 }
 
 impl Default for ApiState {
     fn default() -> Self {
         Self {
             registry: Arc::new(BackendCapabilityRegistry::with_builtin()),
+            runtime: Arc::new(Mutex::new(ApiRuntime::default())),
         }
     }
 }
@@ -62,6 +89,19 @@ pub struct PlanRequest {
     pub source: String,
     pub objective: Option<String>,
 }
+#[derive(Debug, Deserialize)]
+pub struct RuntimeActivationRequest {
+    pub port: u16,
+}
+
+#[derive(Debug, Serialize)]
+struct RuntimeStatusResponse {
+    loopback_only: bool,
+    active: bool,
+    config: Option<RuntimeConfig>,
+    process: Option<RuntimeRecord>,
+    health: Option<LlamaHealth>,
+}
 
 fn parse_objective(value: Option<&str>) -> Objective {
     match value {
@@ -81,8 +121,15 @@ pub fn router(state: ApiState) -> Router {
         .route("/api/v1/capabilities", get(capabilities))
         .route("/api/v1/analyze", post(analyze))
         .route("/api/v1/plan", post(plan))
+        .route(
+            "/api/v1/runtime",
+            get(runtime_status).post(activate_external_runtime),
+        )
+        .route("/api/v1/runtime/status", get(runtime_status))
+        .route("/api/v1/runtime/start", post(start_runtime))
+        .route("/api/v1/runtime/stop", post(stop_runtime))
         .route("/v1/models", get(openai_models))
-        .route("/v1/chat/completions", post(no_runtime))
+        .route("/v1/chat/completions", post(chat_completions))
         .with_state(state)
 }
 
@@ -131,23 +178,297 @@ async fn plan(
             turkmenai_core::Capability::Streaming,
         ]);
     }
-    let hardware = HardwareProfile::detect();
     let plans = ExecutionPlanner {
         registry: &state.registry,
     }
     .plan(
         &model,
-        &hardware,
+        &HardwareProfile::detect(),
         parse_objective(request.objective.as_deref()),
     );
     Ok(Json(plans))
 }
 
-async fn openai_models() -> Json<serde_json::Value> {
-    Json(serde_json::json!({"object":"list","data":[]}))
+fn no_active_runtime() -> AppError {
+    AppError(StatusCode::CONFLICT, "NO_ACTIVE_RUNTIME".into(), "No verified local runtime and READY model are active. Start llama-server on loopback and wait for GET /health to report ready.".into())
 }
-async fn no_runtime() -> AppError {
-    AppError(StatusCode::CONFLICT, "NO_ACTIVE_RUNTIME".into(), "No verified runtime and READY model are active. Install and smoke-test a compatible model before requesting inference.".into())
+
+fn runtime_snapshot(
+    state: &ApiState,
+) -> Result<
+    (
+        Option<RuntimeConfig>,
+        Option<LlamaServerEndpoint>,
+        Option<RuntimeRecord>,
+    ),
+    AppError,
+> {
+    let mut runtime = state.runtime.lock().map_err(|_| {
+        AppError(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "RUNTIME_STATE_LOCKED".into(),
+            "Could not read local runtime state.".into(),
+        )
+    })?;
+    let process = runtime.supervisor.refresh(LLAMA_RUNTIME_ID);
+    Ok((runtime.config.clone(), runtime.endpoint.clone(), process))
+}
+
+async fn runtime_status(
+    State(state): State<ApiState>,
+) -> Result<Json<RuntimeStatusResponse>, AppError> {
+    let (config, endpoint, process) = runtime_snapshot(&state)?;
+    let health = match endpoint {
+        Some(endpoint) => Some(
+            tokio::task::spawn_blocking(move || endpoint.health())
+                .await
+                .map_err(|error| {
+                    AppError(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "RUNTIME_TASK_FAILED".into(),
+                        error.to_string(),
+                    )
+                })?,
+        ),
+        None => None,
+    };
+    let active = health == Some(LlamaHealth::Ready);
+    Ok(Json(RuntimeStatusResponse {
+        loopback_only: true,
+        active,
+        config,
+        process,
+        health,
+    }))
+}
+
+fn validate_runtime_config(config: &RuntimeConfig) -> Result<(PathBuf, PathBuf), AppError> {
+    if config.port == 0 {
+        return Err(AppError(
+            StatusCode::BAD_REQUEST,
+            "RUNTIME_CONFIG_INVALID".into(),
+            "port must be non-zero".into(),
+        ));
+    }
+    if !(512..=131_072).contains(&config.context_size) {
+        return Err(AppError(
+            StatusCode::BAD_REQUEST,
+            "RUNTIME_CONFIG_INVALID".into(),
+            "context_size must be between 512 and 131072".into(),
+        ));
+    }
+    if !(0..=1000).contains(&config.gpu_layers) {
+        return Err(AppError(
+            StatusCode::BAD_REQUEST,
+            "RUNTIME_CONFIG_INVALID".into(),
+            "gpu_layers must be between 0 and 1000".into(),
+        ));
+    }
+    let model = config
+        .model_path
+        .as_ref()
+        .map(PathBuf::from)
+        .ok_or_else(|| {
+            AppError(
+                StatusCode::BAD_REQUEST,
+                "RUNTIME_CONFIG_INVALID".into(),
+                "model_path is required".into(),
+            )
+        })?;
+    if !model.is_file() {
+        return Err(AppError(
+            StatusCode::BAD_REQUEST,
+            "MODEL_PATH_MISSING".into(),
+            model.display().to_string(),
+        ));
+    }
+    let explicit = config.executable_path.as_ref().map(PathBuf::from);
+    let executable = discover_llama_server(explicit.as_deref()).ok_or_else(|| {
+        AppError(
+            StatusCode::BAD_REQUEST,
+            "LLAMA_SERVER_NOT_FOUND".into(),
+            "Select a verified local llama-server executable or add it to PATH.".into(),
+        )
+    })?;
+    Ok((model, executable))
+}
+
+async fn activate_external_runtime(
+    State(state): State<ApiState>,
+    Json(request): Json<RuntimeActivationRequest>,
+) -> Result<Json<RuntimeStatusResponse>, AppError> {
+    let endpoint = LlamaServerEndpoint::new(request.port).map_err(|error| {
+        AppError(
+            StatusCode::BAD_REQUEST,
+            "RUNTIME_CONFIG_INVALID".into(),
+            error.to_string(),
+        )
+    })?;
+    let endpoint_for_check = endpoint.clone();
+    let health = tokio::task::spawn_blocking(move || endpoint_for_check.health())
+        .await
+        .map_err(|error| {
+            AppError(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "RUNTIME_TASK_FAILED".into(),
+                error.to_string(),
+            )
+        })?;
+    if health != LlamaHealth::Ready {
+        return Err(AppError(
+            StatusCode::CONFLICT,
+            "RUNTIME_NOT_READY".into(),
+            format!("The local llama-server health state is {health:?}."),
+        ));
+    }
+    {
+        let mut runtime = state.runtime.lock().map_err(|_| {
+            AppError(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "RUNTIME_STATE_LOCKED".into(),
+                "Could not update local runtime state.".into(),
+            )
+        })?;
+        runtime.endpoint = Some(endpoint);
+        runtime.config = Some(RuntimeConfig {
+            port: request.port,
+            ..RuntimeConfig::default()
+        });
+    }
+    runtime_status(State(state)).await
+}
+
+async fn start_runtime(
+    State(state): State<ApiState>,
+    Json(config): Json<RuntimeConfig>,
+) -> Result<Json<RuntimeStatusResponse>, AppError> {
+    let (model, executable) = validate_runtime_config(&config)?;
+    let workspace = default_data_root();
+    std::fs::create_dir_all(&workspace).map_err(|error| {
+        AppError(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "RUNTIME_WORKSPACE_FAILED".into(),
+            error.to_string(),
+        )
+    })?;
+    let mut arguments = vec![
+        "--model".into(),
+        model.display().to_string(),
+        "--host".into(),
+        "127.0.0.1".into(),
+        "--port".into(),
+        config.port.to_string(),
+        "--ctx-size".into(),
+        config.context_size.to_string(),
+    ];
+    if config.gpu_layers > 0 {
+        arguments.extend(["--n-gpu-layers".into(), config.gpu_layers.to_string()]);
+    }
+    let endpoint = LlamaServerEndpoint::new(config.port).map_err(|error| {
+        AppError(
+            StatusCode::BAD_REQUEST,
+            "RUNTIME_CONFIG_INVALID".into(),
+            error.to_string(),
+        )
+    })?;
+    {
+        let mut runtime = state.runtime.lock().map_err(|_| {
+            AppError(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "RUNTIME_STATE_LOCKED".into(),
+                "Could not start local runtime.".into(),
+            )
+        })?;
+        runtime
+            .supervisor
+            .start(
+                LLAMA_RUNTIME_ID,
+                "llama.cpp",
+                &executable,
+                &arguments,
+                &workspace,
+            )
+            .map_err(|error| {
+                AppError(
+                    StatusCode::CONFLICT,
+                    "RUNTIME_START_FAILED".into(),
+                    error.to_string(),
+                )
+            })?;
+        runtime.config = Some(config);
+        runtime.endpoint = Some(endpoint);
+    }
+    runtime_status(State(state)).await
+}
+
+async fn stop_runtime(
+    State(state): State<ApiState>,
+) -> Result<Json<RuntimeStatusResponse>, AppError> {
+    {
+        let mut runtime = state.runtime.lock().map_err(|_| {
+            AppError(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "RUNTIME_STATE_LOCKED".into(),
+                "Could not stop local runtime.".into(),
+            )
+        })?;
+        runtime.supervisor.stop(LLAMA_RUNTIME_ID);
+        runtime.endpoint = None;
+    }
+    runtime_status(State(state)).await
+}
+
+async fn ready_runtime(state: &ApiState) -> Result<LlamaServerEndpoint, AppError> {
+    let (_, endpoint, _) = runtime_snapshot(state)?;
+    let endpoint = endpoint.ok_or_else(no_active_runtime)?;
+    let endpoint_for_check = endpoint.clone();
+    let health = tokio::task::spawn_blocking(move || endpoint_for_check.health())
+        .await
+        .map_err(|error| {
+            AppError(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "RUNTIME_TASK_FAILED".into(),
+                error.to_string(),
+            )
+        })?;
+    if health == LlamaHealth::Ready {
+        Ok(endpoint)
+    } else {
+        Err(no_active_runtime())
+    }
+}
+
+async fn openai_models(State(state): State<ApiState>) -> Result<Json<serde_json::Value>, AppError> {
+    let endpoint = ready_runtime(&state).await?;
+    let response = tokio::task::spawn_blocking(move || endpoint.models())
+        .await
+        .map_err(|error| {
+            AppError(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "RUNTIME_TASK_FAILED".into(),
+                error.to_string(),
+            )
+        })?
+        .map_err(|_error| no_active_runtime())?;
+    Ok(Json(response))
+}
+
+async fn chat_completions(
+    State(state): State<ApiState>,
+    Json(payload): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let endpoint = ready_runtime(&state).await?;
+    let response = tokio::task::spawn_blocking(move || endpoint.chat(&payload))
+        .await
+        .map_err(|error| {
+            AppError(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "RUNTIME_TASK_FAILED".into(),
+                error.to_string(),
+            )
+        })?
+        .map_err(|_error| no_active_runtime())?;
+    Ok(Json(response))
 }
 
 pub async fn serve_loopback(port: u16) -> Result<(), std::io::Error> {
@@ -169,5 +490,33 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn runtime_activation_rejects_non_ready_loopback() {
+        let response = router(ApiState::default())
+            .oneshot(
+                Request::post("/api/v1/runtime")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"port":1}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::CONFLICT);
+    }
+
+    #[tokio::test]
+    async fn chat_refuses_requests_without_verified_runtime() {
+        let response = router(ApiState::default())
+            .oneshot(
+                Request::post("/v1/chat/completions")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"messages":[]}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::CONFLICT);
     }
 }

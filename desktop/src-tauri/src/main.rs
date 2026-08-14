@@ -1,11 +1,46 @@
-//! Native shell only. Resolver, hardware fit, and execution planning are owned by turkmenai-core.
+//! Native shell only. Resolver, hardware fit, execution planning, and isolated runtime control are owned by turkmenai-core.
 
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeSet;
+use std::{collections::BTreeSet, path::PathBuf, sync::Mutex};
+use tauri::Manager;
 use turkmenai_core::{
+    llama::{LlamaHealth, LlamaServerEndpoint},
+    runtime::{discover_llama_server, RuntimeRecord, RuntimeSupervisor},
+    state::{AppStateStore, RuntimeConfig},
     BackendCapabilityRegistry, Capability, ExecutionPlanner, HardwareProfile, ModelFormat,
     ModelResolver, Objective, Task,
 };
+
+const LLAMA_RUNTIME_ID: &str = "llama-server";
+
+struct RuntimeManager {
+    supervisor: Mutex<RuntimeSupervisor>,
+    state_store: AppStateStore,
+}
+
+impl RuntimeManager {
+    fn open() -> Result<Self, String> {
+        Ok(Self {
+            supervisor: Mutex::new(RuntimeSupervisor::default()),
+            state_store: AppStateStore::open_default().map_err(|error| error.to_string())?,
+        })
+    }
+
+    fn saved_config(&self) -> Result<RuntimeConfig, String> {
+        self.state_store
+            .load()
+            .map(|state| state.runtime)
+            .map_err(|error| error.to_string())
+    }
+
+    fn save_config(&self, runtime: RuntimeConfig) -> Result<(), String> {
+        let mut state = self.state_store.load().map_err(|error| error.to_string())?;
+        state.runtime = runtime;
+        self.state_store
+            .save(&state)
+            .map_err(|error| error.to_string())
+    }
+}
 
 #[derive(Deserialize)]
 struct PlanRequest {
@@ -19,6 +54,15 @@ struct DesktopStatus {
     core_version: String,
     loopback_default: bool,
     telemetry: bool,
+}
+
+#[derive(Serialize)]
+struct RuntimeStatus {
+    loopback_only: bool,
+    executable_path: Option<String>,
+    config: RuntimeConfig,
+    process: Option<RuntimeRecord>,
+    health: Option<LlamaHealth>,
 }
 
 fn objective(value: Option<&str>) -> Objective {
@@ -66,9 +110,132 @@ fn plan(request: PlanRequest) -> Result<Vec<turkmenai_core::ExecutionPlan>, Stri
     ))
 }
 
+fn runtime_status(manager: &RuntimeManager, config: RuntimeConfig) -> RuntimeStatus {
+    let explicit = config.executable_path.as_ref().map(PathBuf::from);
+    let executable_path =
+        discover_llama_server(explicit.as_deref()).map(|path| path.display().to_string());
+    let process = manager
+        .supervisor
+        .lock()
+        .ok()
+        .and_then(|mut supervisor| supervisor.refresh(LLAMA_RUNTIME_ID));
+    let health = if process.is_some() || config.executable_path.is_some() {
+        LlamaServerEndpoint::new(config.port)
+            .ok()
+            .map(|endpoint| endpoint.health())
+    } else {
+        None
+    };
+    RuntimeStatus {
+        loopback_only: true,
+        executable_path,
+        config,
+        process,
+        health,
+    }
+}
+
+#[tauri::command]
+fn runtime_discover(manager: tauri::State<'_, RuntimeManager>) -> Result<RuntimeStatus, String> {
+    let config = manager.saved_config()?;
+    Ok(runtime_status(&manager, config))
+}
+
+#[tauri::command]
+fn runtime_start(
+    config: RuntimeConfig,
+    manager: tauri::State<'_, RuntimeManager>,
+) -> Result<RuntimeStatus, String> {
+    if config.port == 0 {
+        return Err("RUNTIME_CONFIG_INVALID: port must be non-zero".into());
+    }
+    if !(512..=131_072).contains(&config.context_size) {
+        return Err("RUNTIME_CONFIG_INVALID: context_size must be between 512 and 131072".into());
+    }
+    if !(0..=1000).contains(&config.gpu_layers) {
+        return Err("RUNTIME_CONFIG_INVALID: gpu_layers must be between 0 and 1000".into());
+    }
+    let model_path = config
+        .model_path
+        .as_ref()
+        .map(PathBuf::from)
+        .ok_or_else(|| "RUNTIME_CONFIG_INVALID: model_path is required".to_string())?;
+    if !model_path.is_file() {
+        return Err(format!("MODEL_PATH_MISSING: {}", model_path.display()));
+    }
+    let explicit = config.executable_path.as_ref().map(PathBuf::from);
+    let executable = discover_llama_server(explicit.as_deref()).ok_or_else(|| "LLAMA_SERVER_NOT_FOUND: select a verified local llama-server executable or add it to PATH".to_string())?;
+    let mut arguments = vec![
+        "--model".into(),
+        model_path.display().to_string(),
+        "--host".into(),
+        "127.0.0.1".into(),
+        "--port".into(),
+        config.port.to_string(),
+        "--ctx-size".into(),
+        config.context_size.to_string(),
+    ];
+    if config.gpu_layers > 0 {
+        arguments.extend(["--n-gpu-layers".into(), config.gpu_layers.to_string()]);
+    }
+    let mut supervisor = manager
+        .supervisor
+        .lock()
+        .map_err(|_| "RUNTIME_STATE_LOCKED".to_string())?;
+    supervisor
+        .start(
+            LLAMA_RUNTIME_ID,
+            "llama.cpp",
+            &executable,
+            &arguments,
+            manager.state_store.root(),
+        )
+        .map_err(|error| error.to_string())?;
+    drop(supervisor);
+    manager.save_config(config.clone())?;
+    Ok(runtime_status(&manager, config))
+}
+
+#[tauri::command]
+fn runtime_health(manager: tauri::State<'_, RuntimeManager>) -> Result<RuntimeStatus, String> {
+    let config = manager.saved_config()?;
+    Ok(runtime_status(&manager, config))
+}
+
+#[tauri::command]
+fn runtime_stop(manager: tauri::State<'_, RuntimeManager>) -> Result<RuntimeStatus, String> {
+    let config = manager.saved_config()?;
+    let mut supervisor = manager
+        .supervisor
+        .lock()
+        .map_err(|_| "RUNTIME_STATE_LOCKED".to_string())?;
+    supervisor.stop(LLAMA_RUNTIME_ID);
+    drop(supervisor);
+    Ok(runtime_status(&manager, config))
+}
+
 fn main() {
+    let runtime_manager =
+        RuntimeManager::open().expect("TurkmenAI runtime state could not be initialized");
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![hardware, desktop_status, plan])
-        .run(tauri::generate_context!())
-        .expect("TurkmenAI desktop shell failed to start");
+        .manage(runtime_manager)
+        .invoke_handler(tauri::generate_handler![
+            hardware,
+            desktop_status,
+            plan,
+            runtime_discover,
+            runtime_start,
+            runtime_health,
+            runtime_stop
+        ])
+        .build(tauri::generate_context!())
+        .expect("TurkmenAI desktop shell failed to start")
+        .run(|app, event| {
+            if matches!(event, tauri::RunEvent::Exit) {
+                let manager = app.state::<RuntimeManager>();
+                if let Ok(mut supervisor) = manager.supervisor.lock() {
+                    supervisor.stop(LLAMA_RUNTIME_ID);
+                };
+            }
+        });
 }

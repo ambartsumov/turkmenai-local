@@ -2,9 +2,10 @@ import fs from 'node:fs';
 
 const content = fs.readFileSync(new URL('../client/src/i18n.ts', import.meta.url), 'utf8');
 const locales = ['ru', 'tk', 'en'];
-const blocks = locales.map((locale, index) => {
+const blocks = locales.map((locale) => {
   const start = content.indexOf(`  ${locale}: {`);
-  const end = index === locales.length - 1 ? content.indexOf('\n  },\n};', start) : content.indexOf(`\n  ${locales[index + 1]}: {`, start);
+  const boundaries = [...locales.filter((other) => other !== locale).map((other) => content.indexOf(`\n  ${other}: {`, start + 1)), content.indexOf('\n  },\n};', start)].filter((value) => value >= 0);
+  const end = Math.min(...boundaries);
   if (start < 0 || end < 0) throw new Error(`Locale block not found: ${locale}`);
   return content.slice(start, end).slice(content.slice(start, end).indexOf('{') + 1);
 });

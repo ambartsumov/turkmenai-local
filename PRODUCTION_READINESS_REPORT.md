@@ -19,9 +19,9 @@
 | Linux AppImage | **PASS** | Real x86-64 AppImage produced by Tauri. |
 | Windows installer | **NOT BUILT** | Requires matching Windows CI runner and signing workflow. |
 | macOS DMG | **NOT BUILT** | Requires matching macOS CI runner and notarization workflow. |
-| Rust unit tests | **PASS** | 9 passing tests: core resolver/planner/store/download/runtime/state plus API health. |
+| Rust unit tests | **PASS** | 13 passing tests: core resolver/planner/store/download/runtime/state plus API runtime-gating checks. |
 | TypeScript check | **PASS** | `pnpm run check` passes. |
-| i18n completeness | **PASS** | 68 matching Russian, Turkmen and English keys. |
+| i18n completeness | **PASS** | 117 matching Russian, Turkmen and English keys. |
 | Native Tauri check | **PASS** | `cargo check -p turkmenai-desktop` passes. |
 | Website visual review | **PARTIAL** | Public site and console were manually captured at desktop viewport; mobile capture was interrupted. |
 
@@ -30,28 +30,28 @@
 | Area | Status | Basis |
 |---|---|---|
 | Installation | PARTIAL | Real Linux packages exist; clean-machine install E2E is outstanding. |
-| First-run UX | NOT AVAILABLE | No full zero-config onboarding wizard. |
+| First-run UX | PARTIAL | A four-step local wizard and truthful runtime discovery exist; zero-config model installation is outstanding. |
 | Model discovery | PARTIAL | Resolver and local analysis exist; provider browser is outstanding. |
 | Model download | PARTIAL | Journal + Range + hash implementation exists; real fixture stress test is outstanding. |
 | Resume / verification | PARTIAL | Unit-tested journal recovery and SHA-256 verification; 5GB interruption test is outstanding. |
-| Inference | NOT AVAILABLE | No bundled verified runtime/model. |
+| Inference | PARTIAL | Explicit local `llama-server` lifecycle and loopback chat proxy are implemented; no bundled or E2E-verified runtime/model exists. |
 | Quantization / low-VRAM | PARTIAL | Planner exposes safe fallbacks; a runtime-backed workflow is outstanding. |
-| Local API | PARTIAL | Core API works; inference endpoint intentionally remains gated. |
+| Local API | PARTIAL | Loopback health, hardware, analysis, planning, runtime lifecycle and OpenAI-compatible forwarding exist; inference remains gated until a ready local runtime passes health. |
 | Offline boot | PARTIAL | Core and shell do not require a startup network call; full offline model session is outstanding. |
 | Security | PARTIAL | Loopback default, custom-code warning, state separation and safe runtime workspace are implemented; independent review is outstanding. |
 | Localization | PARTIAL | Russian, Turkmen and English public UI strings are supplied; automated completeness/pluralization test is outstanding. |
 | Website | PARTIAL | Working responsive public site and console exist; performance bundle split and automated accessibility checks are outstanding. |
 | Packaging | PASS for Linux | Three real Linux artifacts and checksums are included. |
 | Documentation | PASS for current scope | User, admin, developer, security, API, install and limitation guides are included. |
-| CI/CD | PARTIAL | Native matrix and release workflow are configured; they have not run in a connected GitHub repository yet. |
+| CI/CD | PARTIAL | x64/ARM native matrix, artifact manifests and tag-triggered release workflow are configured; they have not run in a connected GitHub repository yet. |
 
 ## Final Linux artifacts
 
 | Artifact | SHA-256 |
 |---|---|
-| `TurkmenAI Local_0.1.0_amd64.deb` | `58808f1e7832366991a22c8e75b26088afdd1caea35c8129c374fc8c86b3993a` |
-| `TurkmenAI Local-0.1.0-1.x86_64.rpm` | `79d00e574ccf407d3b9bd2d6835476c990ec4722b2d9c6296a5b00981c0f1dca` |
-| `TurkmenAI Local_0.1.0_amd64.AppImage` | `501ff278fa4206cebde730688e1a6180748c00efde7cf3d54fa42108b87a20c0` |
+| `TurkmenAI Local_0.1.0_amd64.deb` | `d78f95eae562762a90cdae645d5bb346631f813bf90fd7a66813e99fb99dfef6` |
+| `TurkmenAI Local-0.1.0-1.x86_64.rpm` | `eb921eabab62e7a5e97348c565e7bdc715c5c485453b6b78128aa0c11235dbca` |
+| `TurkmenAI Local_0.1.0_amd64.AppImage` | `586c0962e8d1b3194eea2d91ce899f0cb7f29fb6bf915a53cee935bfba53ec23` |
 
 ## Security and privacy
 

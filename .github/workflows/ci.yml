@@ -25,11 +25,23 @@ jobs:
       - run: cargo fmt --all -- --check
 
   native:
-    name: Native check — ${{ matrix.os }}
+    name: Native check — ${{ matrix.id }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, windows-latest, macos-latest]
+        include:
+          - id: linux-x64
+            os: ubuntu-24.04
+          - id: linux-arm64
+            os: ubuntu-24.04-arm
+          - id: windows-x64
+            os: windows-latest
+          - id: windows-arm64
+            os: windows-11-arm
+          - id: macos-x64
+            os: macos-13
+          - id: macos-arm64
+            os: macos-14
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
