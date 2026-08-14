@@ -118,7 +118,7 @@ fn hardware() -> HardwareProfile {
 fn desktop_status() -> DesktopStatus {
     DesktopStatus {
         platform: std::env::consts::OS.into(),
-        core_version: "0.1.0".into(),
+        core_version: "0.2.0".into(),
         loopback_default: true,
         telemetry: false,
     }
