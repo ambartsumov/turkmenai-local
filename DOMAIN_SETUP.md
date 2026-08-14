@@ -1,32 +1,40 @@
 # Domain Setup — `turkmenai.tech`
 
-## Current status
+## Current status (2026-08-14)
 
 | Item | Status |
 |---|---|
 | Registered domain | `turkmenai.tech` is active at Namecheap. |
 | Current DNS mode | Namecheap BasicDNS. Do **not** change nameservers. |
-| Current redirect | A Namecheap HTTP redirect exists and must be removed only when replacement records are ready. |
-| Public website now | https://turkmenai-lxyvv4qu.manus.space |
-| Custom-domain binding | **Waiting for custom-domain feature access.** The platform has not issued a DNS target, so no A/CNAME value may be guessed. |
+| Hosting | GitHub Pages, deployed from `.github/workflows/pages.yml` on every push to `main` that touches `client/**`. |
+| Custom-domain binding | Configured on the GitHub side: `client/public/CNAME` contains `turkmenai.tech`, and the repository's Pages setting has `cname = turkmenai.tech`. **Waiting on the Namecheap DNS records below** before the domain resolves. |
+| Public website (interim) | https://turkmenai-lxyvv4qu.manus.space (still live; keep until `https://turkmenai.tech` verifies). |
 
-## Exact next actions once custom-domain access is available
+## Exact DNS records required (Namecheap → Advanced DNS)
 
-1. In the TurkmenAI Local project, open **Settings → Domains**, choose **Add existing domain**, and enter `turkmenai.tech`.
-2. Select the option to configure **both** the apex domain and `www`, if the setting is offered. Copy the exact record type, host/name, target/value and TTL shown by the platform.
-3. In Namecheap, open **Domain List → turkmenai.tech → Advanced DNS**. Keep **Namecheap BasicDNS** selected.
-4. Do **not** change to Namecheap web-hosting nameservers, CustomDNS, PremiumDNS or wildcard DNS records.
-5. Remove the existing URL redirect. Add only the platform-issued records for the apex and `www`. If Namecheap already has a conflicting A or CNAME record for the same host, remove that conflicting record only.
-6. Before clicking **Save**, compare the visible values character-for-character against the platform’s issued values and obtain an explicit confirmation from the domain owner.
-7. Return to **Settings → Domains** and wait for verification and certificate provisioning. Do not claim the custom domain is live until both `https://turkmenai.tech` and `https://www.turkmenai.tech` load over HTTPS.
+These are GitHub's standard, published Pages IP addresses — not guessed values (https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site).
+
+| Type | Host | Value | TTL |
+|---|---|---|---|
+| A | `@` | `185.199.108.153` | Automatic |
+| A | `@` | `185.199.109.153` | Automatic |
+| A | `@` | `185.199.110.153` | Automatic |
+| A | `@` | `185.199.111.153` | Automatic |
+| CNAME | `www` | `ambartsumov.github.io.` | Automatic |
+
+Steps:
+
+1. Namecheap → **Domain List → turkmenai.tech → Advanced DNS**. Keep **Namecheap BasicDNS** selected.
+2. Remove the existing URL Redirect record for `@` (and for `www` if present).
+3. Add the four `A` records above for host `@`, and the one `CNAME` record for host `www`.
+4. Do not add a CNAME for `@` — apex domains cannot use CNAME; only the `A` records above are valid for `@`.
+5. Save. DNS propagation typically takes minutes to a few hours.
 
 ## Verification
-
-After records are saved and have propagated, verify the public result without exposing account data:
 
 ```bash
 curl -I https://turkmenai.tech
 curl -I https://www.turkmenai.tech
 ```
 
-The expected result is a successful HTTPS response or an intentional canonical redirect between apex and `www` to the published site. DNS propagation and certificate issuance can take time; the existing `manus.space` URL remains the authoritative live address until that verification passes.
+Once DNS has propagated, GitHub issues a Let's Encrypt certificate automatically (usually within ~15–60 minutes of the records resolving correctly) and the repository's **Settings → Pages** will show "DNS check successful" with an option to enforce HTTPS. Until then, `https://turkmenai-lxyvv4qu.manus.space` remains the authoritative live address.
