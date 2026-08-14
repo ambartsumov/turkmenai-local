@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+rm -rf dist target
+echo "Removed local build outputs. Model data is never stored in this repository and is unaffected."

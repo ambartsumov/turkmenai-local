@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "llama.cpp",
+  "display_name": "llama.cpp",
+  "integration": "process_api",
+  "update_policy": "ask",
+  "formats": ["gguf"],
+  "tasks": ["text_generation", "embeddings", "vision_when_projector_present"],
+  "hardware": ["cpu", "cuda", "metal", "vulkan", "rocm", "sycl"],
+  "features": ["streaming", "tool_calling", "structured_output", "grammar", "speculative_decoding", "cpu_offload", "gpu_offload", "kv_cache_quantization", "lora", "multi_gpu_when_runtime_supports"],
+  "limitations": ["Capabilities are runtime-version and artifact dependent", "Vision requires a compatible projector and backend build", "Speculative decoding must be benchmarked before recommendation"],
+  "evidence": "upstream_documentation",
+  "source": "https://github.com/ggml-org/llama.cpp"
+}

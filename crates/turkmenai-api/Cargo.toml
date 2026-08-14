@@ -1,0 +1,16 @@
+[package]
+name = "turkmenai-api"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Shared localhost HTTP API for TurkmenAI Local clients"
+
+[dependencies]
+axum.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+turkmenai-core = { path = "../turkmenai-core" }
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }

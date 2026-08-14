@@ -1,0 +1,17 @@
+[package]
+name = "tmai"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "TurkmenAI Local command line interface"
+
+[[bin]]
+name = "tmai"
+path = "src/main.rs"
+
+[dependencies]
+turkmenai-core = { path = "../../crates/turkmenai-core" }
+turkmenai-api = { path = "../../crates/turkmenai-api" }
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true

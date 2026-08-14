@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://turkmenai.local/schemas/model-plan/v1.json",
+  "title": "TurkmenAI Execution Plan",
+  "type": "object",
+  "required": ["schema_version", "model_id", "backend", "artifact", "requirements", "score", "evidence"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "model_id": {"type": "string", "minLength": 1},
+    "backend": {"type": "string", "minLength": 1},
+    "backend_version": {"type": "string"},
+    "artifact": {"type": "string", "minLength": 1},
+    "context_tokens": {"type": "integer", "minimum": 256},
+    "gpu_layers": {"oneOf": [{"type": "integer", "minimum": 0}, {"const": "auto"}]},
+    "offload": {"enum": ["gpu", "gpu_ram", "cpu", "auto"]},
+    "features": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "requirements": {
+      "type": "object",
+      "required": ["ram_mb", "disk_mb"],
+      "properties": {
+        "ram_mb": {"type": "integer", "minimum": 0},
+        "vram_mb": {"type": "integer", "minimum": 0},
+        "disk_mb": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "score": {"type": "number", "minimum": 0, "maximum": 100},
+    "evidence": {"enum": ["estimated", "measured"]},
+    "fallbacks": {"type": "array", "items": {"$ref": "#/$defs/fallback"}}
+  },
+  "$defs": {
+    "fallback": {
+      "type": "object",
+      "required": ["reason", "safety", "score"],
+      "properties": {
+        "reason": {"type": "string"},
+        "safety": {"enum": ["automatic", "requires_confirmation"]},
+        "score": {"type": "number", "minimum": 0, "maximum": 100}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

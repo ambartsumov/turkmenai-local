@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+pnpm install --frozen-lockfile
+"$(rustup which cargo)" fetch
+echo "Setup complete. Run ./scripts/test, then ./scripts/dev."

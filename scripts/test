@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+pnpm run check
+"$(rustup which cargo)" test --workspace
+"$(rustup which cargo)" check -p turkmenai-desktop
+cargo fmt --all -- --check

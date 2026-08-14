@@ -1,0 +1,15 @@
+[package]
+name = "turkmenai-desktop"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Native desktop shell for TurkmenAI Local"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+tauri = { version = "2", features = [] }
+turkmenai-core = { path = "../../crates/turkmenai-core" }
