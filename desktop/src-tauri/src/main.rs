@@ -7,6 +7,7 @@ use turkmenai_core::{
     catalog::{Catalog, CatalogSnapshot, Recommendation},
     datasets::{DatasetCatalog, DatasetEvaluation, DatasetSnapshot},
     llama::{LlamaHealth, LlamaServerEndpoint},
+    provision::{self, EngineState, ManagedEngine},
     runtime::{discover_llama_server, RuntimeRecord, RuntimeSupervisor},
     state::{AppStateStore, RuntimeConfig},
     BackendCapabilityRegistry, Capability, ExecutionPlanner, HardwareProfile, ModelFormat,
@@ -65,6 +66,36 @@ struct RuntimeStatus {
     config: RuntimeConfig,
     process: Option<RuntimeRecord>,
     health: Option<LlamaHealth>,
+    /// The managed llama.cpp engine, when the app has set one up automatically.
+    engine: Option<ManagedEngine>,
+    /// Whether a managed engine is ready without any manual configuration.
+    engine_state: EngineState,
+}
+
+#[derive(Serialize)]
+struct EngineStatus {
+    state: EngineState,
+    engine: Option<ManagedEngine>,
+}
+
+/// Environment that lets a managed engine binary find its bundled shared
+/// libraries, using the correct variable for each platform.
+fn engine_library_env(engine: &ManagedEngine) -> Vec<(String, String)> {
+    let var = if cfg!(target_os = "windows") {
+        "PATH"
+    } else if cfg!(target_os = "macos") {
+        "DYLD_LIBRARY_PATH"
+    } else {
+        "LD_LIBRARY_PATH"
+    };
+    let existing = std::env::var(var).unwrap_or_default();
+    let separator = if cfg!(windows) { ";" } else { ":" };
+    let value = if existing.is_empty() {
+        engine.lib_dir.clone()
+    } else {
+        format!("{}{}{}", engine.lib_dir, separator, existing)
+    };
+    vec![(var.to_string(), value)]
 }
 
 fn objective(value: Option<&str>) -> Objective {
@@ -163,20 +194,29 @@ fn dataset_recommendations(refresh: Option<bool>) -> DatasetsResult {
 }
 
 fn runtime_status(manager: &RuntimeManager, config: RuntimeConfig) -> RuntimeStatus {
+    let engine = provision::installed_engine();
     let explicit = config.executable_path.as_ref().map(PathBuf::from);
-    let executable_path =
-        discover_llama_server(explicit.as_deref()).map(|path| path.display().to_string());
+    // Prefer an explicit user path, then a PATH-discovered binary, then the
+    // managed engine the app installed for the user automatically.
+    let executable_path = discover_llama_server(explicit.as_deref())
+        .map(|path| path.display().to_string())
+        .or_else(|| engine.as_ref().map(|engine| engine.server_path.clone()));
     let process = manager
         .supervisor
         .lock()
         .ok()
         .and_then(|mut supervisor| supervisor.refresh(LLAMA_RUNTIME_ID));
-    let health = if process.is_some() || config.executable_path.is_some() {
+    let health = if process.is_some() || executable_path.is_some() {
         LlamaServerEndpoint::new(config.port)
             .ok()
             .map(|endpoint| endpoint.health())
     } else {
         None
+    };
+    let engine_state = if engine.is_some() {
+        EngineState::Ready
+    } else {
+        EngineState::NotInstalled
     };
     RuntimeStatus {
         loopback_only: true,
@@ -184,7 +224,34 @@ fn runtime_status(manager: &RuntimeManager, config: RuntimeConfig) -> RuntimeSta
         config,
         process,
         health,
+        engine,
+        engine_state,
     }
+}
+
+/// Report whether a managed engine is already set up. Never touches the network.
+#[tauri::command]
+fn engine_status() -> EngineStatus {
+    let engine = provision::installed_engine();
+    EngineStatus {
+        state: if engine.is_some() {
+            EngineState::Ready
+        } else {
+            EngineState::NotInstalled
+        },
+        engine,
+    }
+}
+
+/// Set up the local AI engine automatically: download and unpack the official
+/// llama.cpp build for this platform. Explicit, user-triggered, no model download.
+#[tauri::command]
+fn engine_install() -> Result<EngineStatus, String> {
+    let engine = provision::provision().map_err(|error| error.to_string())?;
+    Ok(EngineStatus {
+        state: EngineState::Ready,
+        engine: Some(engine),
+    })
 }
 
 #[tauri::command]
@@ -215,8 +282,19 @@ fn runtime_start(
     if !model_path.is_file() {
         return Err(format!("MODEL_PATH_MISSING: {}", model_path.display()));
     }
+    // Resolve the engine automatically: explicit path → PATH → managed engine,
+    // and if none is present yet, set one up now so the user never has to install
+    // a runtime by hand.
     let explicit = config.executable_path.as_ref().map(PathBuf::from);
-    let executable = discover_llama_server(explicit.as_deref()).ok_or_else(|| "LLAMA_SERVER_NOT_FOUND: select a verified local llama-server executable or add it to PATH".to_string())?;
+    let (executable, extra_env) = match discover_llama_server(explicit.as_deref()) {
+        Some(path) => (path, Vec::new()),
+        None => {
+            let engine =
+                provision::provision().map_err(|error| format!("ENGINE_SETUP_FAILED: {error}"))?;
+            let env = engine_library_env(&engine);
+            (PathBuf::from(&engine.server_path), env)
+        }
+    };
     let mut arguments = vec![
         "--model".into(),
         model_path.display().to_string(),
@@ -241,6 +319,7 @@ fn runtime_start(
             &executable,
             &arguments,
             manager.state_store.root(),
+            &extra_env,
         )
         .map_err(|error| error.to_string())?;
     drop(supervisor);
@@ -278,6 +357,8 @@ fn main() {
             catalog_recommendations,
             catalog_all,
             dataset_recommendations,
+            engine_status,
+            engine_install,
             runtime_discover,
             runtime_start,
             runtime_health,

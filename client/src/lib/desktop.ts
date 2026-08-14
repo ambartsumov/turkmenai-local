@@ -3,7 +3,10 @@ export type DesktopStatus = { platform: string; core_version: string; loopback_d
 export type Hardware = { cpu: string; ram_mib: number; free_disk_mib: number; accelerators: string[]; vram_mib: number; os: string };
 export type RuntimeConfig = { executable_path: string | null; model_path: string | null; port: number; context_size: number; gpu_layers: number };
 export type RuntimeProcess = { id: string; backend: string; executable: string; arguments: string[]; workspace: string; state: "stopped" | "starting" | "running" | "failed"; pid: number | null; started_unix_ms: number | null; error: string | null };
-export type RuntimeStatus = { loopback_only: boolean; executable_path: string | null; config: RuntimeConfig; process: RuntimeProcess | null; health: "ready" | "loading" | "unreachable" | "failed" | null };
+export type EngineState = "not_installed" | "ready";
+export type ManagedEngine = { backend: string; version: string; server_path: string; lib_dir: string };
+export type EngineStatus = { state: EngineState; engine: ManagedEngine | null };
+export type RuntimeStatus = { loopback_only: boolean; executable_path: string | null; config: RuntimeConfig; process: RuntimeProcess | null; health: "ready" | "loading" | "unreachable" | "failed" | null; engine: ManagedEngine | null; engine_state: EngineState };
 
 function inTauri() { return "__TAURI_INTERNALS__" in window; }
 
@@ -39,6 +42,15 @@ export function getRuntimeHealth(): Promise<RuntimeStatus | null> {
 
 export function stopRuntime(): Promise<RuntimeStatus | null> {
   return invokeRuntime<RuntimeStatus>("runtime_stop");
+}
+
+export function getEngineStatus(): Promise<EngineStatus | null> {
+  return invokeRuntime<EngineStatus>("engine_status");
+}
+
+/** Set up the local AI engine automatically (downloads llama.cpp for this OS). */
+export function installEngine(): Promise<EngineStatus | null> {
+  return invokeRuntime<EngineStatus>("engine_install");
 }
 
 // ---- Catalog (models) & datasets, discovered from Hugging Face -------------

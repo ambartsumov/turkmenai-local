@@ -70,3 +70,24 @@ footer{padding:39px clamp(20px,8vw,144px);background:#06101b;display:grid;grid-t
 .catalog-empty svg{color:var(--signal)}
 .catalog-empty span{color:#8ba0a3;font-size:12px;max-width:420px}
 @media (max-width:800px){.catalog-head{flex-direction:column}.catalog-grid{grid-template-columns:1fr}}
+.engine-banner{margin-top:16px;border:1px solid rgba(49,216,199,.4);background:linear-gradient(135deg,#0c2a30,#0a1c27);padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.engine-banner strong{display:block;margin-bottom:5px}
+.engine-banner p{margin:0;color:#a7bbbd;font-size:12px;line-height:1.5;max-width:520px}
+.engine-banner .wizard-next{white-space:nowrap}
+.engine-version{margin:14px 0 0;color:#7ff0e2;font:700 10px "Space Mono",monospace;letter-spacing:.06em}
+.wizard-runtime.runtime-engine{border-color:rgba(49,216,199,.4)}
+@media (max-width:800px){.engine-banner{flex-direction:column;align-items:flex-start}}
+.api-base{color:var(--signal);font:700 12px "Space Mono",monospace;border:1px solid rgba(49,216,199,.25);padding:10px;white-space:nowrap}
+.api-groups{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.api-groups h3{font-size:13px;letter-spacing:-.02em;margin:0 0 12px;color:#cfe0e1}
+.api-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
+.api-list li{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:#0a1a27;padding:9px 12px}
+.api-list code{color:#dceceb;font:600 12px "Space Mono",monospace}
+.api-method{font:700 9px "Space Mono",monospace;letter-spacing:.06em;padding:3px 6px;min-width:44px;text-align:center;color:#0a1c22;background:#8fded2}
+.api-method.m-post{background:var(--sand)}
+.api-note{margin:12px 0 0;color:#93a7aa;font-size:11.5px;line-height:1.5}
+@media (max-width:800px){.api-groups{grid-template-columns:1fr}}
+.notfound-shell{min-height:100vh;background:linear-gradient(140deg,#07131e,#0a2630);color:var(--fog);display:grid;place-items:center;padding:clamp(20px,6vw,80px)}
+.notfound-inner{max-width:560px}
+.notfound-inner h1{font-size:clamp(80px,16vw,180px);line-height:.9;letter-spacing:-.07em;margin:0 0 18px}
+.notfound-lead{color:#b4c7ca;font-size:16px;line-height:1.65;margin-bottom:32px;max-width:440px}

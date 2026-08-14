@@ -16,6 +16,7 @@ pub mod datasets;
 pub mod download;
 pub mod huggingface;
 pub mod llama;
+pub mod provision;
 pub mod runtime;
 pub mod state;
 pub mod store;
@@ -421,7 +422,7 @@ unsafe extern "C" {
     fn statvfs(path: *const std::ffi::c_char, buf: *mut libc_statvfs) -> i32;
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum Objective {
     Balanced,

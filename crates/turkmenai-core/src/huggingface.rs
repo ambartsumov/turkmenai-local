@@ -359,6 +359,40 @@ fn size_from_categories(tags: &[String]) -> u64 {
     (lower_rows / 1024).max(if lower_rows > 0 { 1 } else { 0 })
 }
 
+fn localized_dataset_desc(
+    name: &str,
+    category: DatasetCategory,
+    license: &str,
+) -> BTreeMap<String, String> {
+    use DatasetCategory::*;
+    let (en, ru, tk) = match category {
+        Instruction => ("instruction-tuning", "инструкций", "görkezme"),
+        Chat => ("chat", "чата", "chat"),
+        Code => ("code", "кода", "kod"),
+        Reasoning => ("reasoning/math", "рассуждений", "pikirleniş"),
+        Translation => ("translation", "перевода", "terjime"),
+        Summarization => ("summarization", "суммаризации", "gysgaltma"),
+        Classification => ("classification", "классификации", "klassifikasiýa"),
+        Multilingual => ("multilingual", "многоязычный", "köpdilli"),
+        Speech => ("speech", "речи", "ses"),
+        Embeddings => ("embeddings", "эмбеддингов", "embedding"),
+    };
+    let mut map = BTreeMap::new();
+    map.insert(
+        "en".into(),
+        format!("{name}: {en} dataset. License: {license}. Hosted on Hugging Face."),
+    );
+    map.insert(
+        "ru".into(),
+        format!("{name}: датасет для {ru}. Лицензия: {license}. Источник — Hugging Face."),
+    );
+    map.insert(
+        "tk".into(),
+        format!("{name}: {tk} dataseti. Ygtyýarnama: {license}. Çeşme — Hugging Face."),
+    );
+    map
+}
+
 fn dataset_risk(license: &str) -> DatasetRisk {
     match license.to_ascii_lowercase().as_str() {
         l if l.contains("nc") => DatasetRisk::NonCommercial,
@@ -383,14 +417,8 @@ fn map_dataset(
         .take(6)
         .collect();
     let download_mib = size_mib.unwrap_or_else(|| size_from_categories(&row.tags));
-    let mut description = BTreeMap::new();
-    description.insert(
-        "en".to_string(),
-        format!(
-            "{} from Hugging Face ({} downloads).",
-            row.id, row.downloads
-        ),
-    );
+    let name = row.id.split('/').next_back().unwrap_or(&row.id);
+    let description = localized_dataset_desc(name, category, &license);
     DatasetRecord {
         id: sanitize_id(&row.id),
         name: row.id.split('/').next_back().unwrap_or(&row.id).to_string(),
@@ -515,11 +543,7 @@ pub fn map_model(
         .unwrap_or_else(|| "GGUF".into());
     let name = row.id.split('/').next_back().unwrap_or(&row.id).to_string();
     let short = row.id.clone();
-    let mut description = BTreeMap::new();
-    description.insert(
-        "en".to_string(),
-        format!("{name} from Hugging Face ({} downloads).", row.downloads),
-    );
+    let description = localized_model_desc(&name, category, params_b, &parse_license(&row.tags));
     Some(CatalogModel {
         id: sanitize_id(&row.id),
         name,
@@ -548,6 +572,55 @@ pub fn map_model(
         objectives: default_objectives(params_b),
         description,
     })
+}
+
+/// Build a short, honest model-card description in all three UI languages from
+/// structured metadata (never scraped prose). Populating en/ru/tk keeps every
+/// catalog card readable in Russian, Turkmen and English.
+fn localized_model_desc(
+    name: &str,
+    category: ModelCategory,
+    params_b: f32,
+    license: &str,
+) -> BTreeMap<String, String> {
+    let size = if params_b > 0.0 {
+        format!("{params_b}B")
+    } else {
+        String::new()
+    };
+    let (cat_en, cat_ru, cat_tk) = model_category_words(category);
+    let mut map = BTreeMap::new();
+    map.insert(
+        "en".into(),
+        format!("{name}: {size} {cat_en} model. License: {license}. Hosted on Hugging Face.")
+            .replace("  ", " "),
+    );
+    map.insert(
+        "ru".into(),
+        format!("{name}: {cat_ru}-модель {size}. Лицензия: {license}. Источник — Hugging Face.")
+            .replace("  ", " "),
+    );
+    map.insert(
+        "tk".into(),
+        format!("{name}: {size} {cat_tk} model. Ygtyýarnama: {license}. Çeşme — Hugging Face.")
+            .replace("  ", " "),
+    );
+    map
+}
+
+fn model_category_words(category: ModelCategory) -> (&'static str, &'static str, &'static str) {
+    use ModelCategory::*;
+    match category {
+        Chat => ("chat", "чат", "chat"),
+        Reasoning => ("reasoning", "рассуждающая", "pikirleniş"),
+        Code => ("coding", "для кода", "kod"),
+        Translation => ("translation", "перевод", "terjime"),
+        Multilingual => ("multilingual", "многоязычная", "köpdilli"),
+        Vision => ("vision", "зрение", "görüş"),
+        SpeechRecognition => ("speech-recognition", "распознавание речи", "sesi tanamak"),
+        SpeechSynthesis => ("speech-synthesis", "синтез речи", "ses sinteziniň"),
+        Embeddings => ("embedding", "эмбеддинги", "embedding"),
+    }
 }
 
 fn default_objectives(params_b: f32) -> Vec<Objective> {

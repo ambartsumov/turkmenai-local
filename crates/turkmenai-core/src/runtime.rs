@@ -50,6 +50,7 @@ impl RuntimeSupervisor {
         executable: &Path,
         arguments: &[String],
         workspace: &Path,
+        extra_env: &[(String, String)],
     ) -> Result<RuntimeRecord, CoreError> {
         if !workspace.is_dir() {
             return Err(CoreError::MissingPath(workspace.display().to_string()));
@@ -62,14 +63,19 @@ impl RuntimeSupervisor {
                 "runtime already active: {id}"
             )));
         }
-        let child = Command::new(executable)
+        let mut command = Command::new(executable);
+        command
             .args(arguments)
             .current_dir(workspace)
             .env_clear()
             .env("PATH", std::env::var("PATH").unwrap_or_default())
-            .env("HOME", workspace)
-            .spawn()
-            .map_err(CoreError::Io)?;
+            .env("HOME", workspace);
+        // Extra environment (e.g. a managed engine's shared-library directory) is
+        // applied last so it can extend PATH / LD_LIBRARY_PATH deterministically.
+        for (key, value) in extra_env {
+            command.env(key, value);
+        }
+        let child = command.spawn().map_err(CoreError::Io)?;
         let record = RuntimeRecord {
             id: id.into(),
             backend: backend.into(),
@@ -164,6 +170,7 @@ mod tests {
                 command,
                 &["-c".into(), "sleep 5".into()],
                 workspace.path(),
+                &[],
             )
             .unwrap();
         assert_eq!(record.state, RuntimeState::Running);

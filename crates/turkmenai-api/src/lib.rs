@@ -471,6 +471,7 @@ async fn start_runtime(
                 &executable,
                 &arguments,
                 &workspace,
+                &[],
             )
             .map_err(|error| {
                 AppError(
