@@ -80,8 +80,9 @@ pub fn engine_state() -> EngineState {
 }
 
 /// Pick the most portable release asset for the given OS/arch. Pure and testable.
-/// Prefers a Vulkan or plain CPU build and avoids vendor-specific CUDA/HIP/SYCL
-/// packages that would require separate driver toolkits.
+/// Prefers the portable CPU build (works without any GPU driver toolkit) and
+/// avoids vendor-specific CUDA/HIP/ROCm/SYCL/OpenVINO/OpenCL packages. Windows
+/// ships `.zip`; Linux and macOS ship `.tar.gz` — both are accepted.
 pub fn select_asset<'a>(
     assets: &'a [GithubAsset],
     os: &str,
@@ -99,25 +100,35 @@ pub fn select_asset<'a>(
         _ => &[],
     };
     let matches = |name: &str, keys: &[&str]| keys.iter().any(|key| name.contains(key));
+    let accel = [
+        "cuda", "hip", "rocm", "sycl", "cann", "openvino", "opencl", "adreno", "cudart",
+    ];
     let candidates: Vec<&GithubAsset> = assets
         .iter()
         .filter(|asset| {
             let name = asset.name.to_ascii_lowercase();
-            name.ends_with(".zip")
+            (name.ends_with(".zip") || name.ends_with(".tar.gz"))
                 && name.contains("bin")
+                && !name.contains("xcframework")
                 && matches(&name, os_keys)
                 && (arch_keys.is_empty() || matches(&name, arch_keys))
-                && !name.contains("cuda")
-                && !name.contains("hip")
-                && !name.contains("sycl")
-                && !name.contains("cann")
+                && !accel.iter().any(|key| name.contains(key))
         })
         .collect();
+    // Rank: a build that mentions "cpu" or mentions no accelerator at all is most
+    // portable; Vulkan (needs a loader) is a fallback; then smallest wins.
     candidates
         .iter()
-        .find(|asset| asset.name.to_ascii_lowercase().contains("vulkan"))
+        .find(|asset| {
+            let name = asset.name.to_ascii_lowercase();
+            name.contains("cpu") || !name.contains("vulkan")
+        })
         .copied()
         .or_else(|| candidates.iter().min_by_key(|asset| asset.size).copied())
+}
+
+fn is_tar_gz(name: &str) -> bool {
+    name.to_ascii_lowercase().ends_with(".tar.gz")
 }
 
 fn client() -> Result<reqwest::blocking::Client, CoreError> {
@@ -160,9 +171,18 @@ pub fn provision() -> Result<ManagedEngine, CoreError> {
     })?;
     let root = engine_root().join(sanitize(&release.tag_name));
     fs::create_dir_all(&root)?;
-    let archive = root.join("engine.zip");
+    let tar_gz = is_tar_gz(&asset.name);
+    let archive = root.join(if tar_gz {
+        "engine.tar.gz"
+    } else {
+        "engine.zip"
+    });
     HttpDownloader::default().download(&asset.browser_download_url, &archive, None)?;
-    extract_zip(&archive, &root)?;
+    if tar_gz {
+        extract_tar_gz(&archive, &root)?;
+    } else {
+        extract_zip(&archive, &root)?;
+    }
     let server =
         find_server(&root).ok_or_else(|| CoreError::Runtime("ENGINE_BINARY_NOT_FOUND".into()))?;
     #[cfg(unix)]
@@ -231,6 +251,19 @@ fn extract_zip(archive: &Path, dest: &Path) -> Result<(), CoreError> {
     Ok(())
 }
 
+/// Extract a `.tar.gz` (Linux/macOS engine builds). The `tar` crate refuses
+/// absolute paths and `..` components, so extraction stays inside `dest`; unix
+/// permissions (the executable bit on `llama-server`) are preserved.
+fn extract_tar_gz(archive: &Path, dest: &Path) -> Result<(), CoreError> {
+    let file = fs::File::open(archive)?;
+    let decoder = flate2::read::GzDecoder::new(file);
+    let mut tar = tar::Archive::new(decoder);
+    tar.set_preserve_permissions(true);
+    tar.unpack(dest)
+        .map_err(|error| CoreError::Runtime(format!("ENGINE_ARCHIVE_INVALID: {error}")))?;
+    Ok(())
+}
+
 /// Locate the `llama-server` binary anywhere under `root`.
 fn find_server(root: &Path) -> Option<PathBuf> {
     let wanted = if cfg!(windows) {
@@ -274,40 +307,73 @@ mod tests {
         }
     }
 
-    #[test]
-    fn selects_linux_x64_over_other_platforms() {
-        let assets = vec![
-            asset("llama-b1-bin-ubuntu-x64.zip", 30),
-            asset("llama-b1-bin-win-x64.zip", 25),
-            asset("llama-b1-bin-macos-arm64.zip", 20),
-        ];
-        let chosen = select_asset(&assets, "linux", "x86_64").unwrap();
-        assert_eq!(chosen.name, "llama-b1-bin-ubuntu-x64.zip");
+    /// Mirrors the real llama.cpp release: Linux/macOS ship .tar.gz, Windows .zip,
+    /// plus many accelerator variants that must be avoided for a driver-free setup.
+    fn realistic_assets() -> Vec<GithubAsset> {
+        [
+            ("cudart-llama-bin-win-cuda-12.4-x64.zip", 391),
+            ("llama-b1-bin-macos-arm64.tar.gz", 11),
+            ("llama-b1-bin-macos-x64.tar.gz", 11),
+            ("llama-b1-bin-ubuntu-arm64.tar.gz", 13),
+            ("llama-b1-bin-ubuntu-vulkan-x64.tar.gz", 33),
+            ("llama-b1-bin-ubuntu-x64.tar.gz", 16),
+            ("llama-b1-bin-ubuntu-sycl-fp16-x64.tar.gz", 53),
+            ("llama-b1-bin-win-cpu-x64.zip", 18),
+            ("llama-b1-bin-win-cpu-arm64.zip", 12),
+            ("llama-b1-bin-win-cuda-12.4-x64.zip", 250),
+            ("llama-b1-bin-win-vulkan-x64.zip", 34),
+            ("llama-b1-xcframework.zip", 283),
+        ]
+        .into_iter()
+        .map(|(n, s)| asset(n, s))
+        .collect()
     }
 
     #[test]
-    fn prefers_vulkan_when_present() {
-        let assets = vec![
-            asset("llama-b1-bin-ubuntu-x64.zip", 30),
-            asset("llama-b1-bin-ubuntu-vulkan-x64.zip", 40),
-        ];
+    fn selects_portable_cpu_tar_gz_on_linux_x64() {
+        let assets = realistic_assets();
         let chosen = select_asset(&assets, "linux", "x86_64").unwrap();
-        assert!(chosen.name.contains("vulkan"));
+        assert_eq!(chosen.name, "llama-b1-bin-ubuntu-x64.tar.gz");
     }
 
     #[test]
-    fn avoids_cuda_builds() {
-        let assets = vec![
-            asset("llama-b1-bin-win-cuda-x64.zip", 90),
-            asset("llama-b1-bin-win-x64.zip", 25),
-        ];
+    fn selects_cpu_zip_on_windows_x64_not_vulkan_or_cuda() {
+        let assets = realistic_assets();
         let chosen = select_asset(&assets, "windows", "x86_64").unwrap();
-        assert!(!chosen.name.contains("cuda"));
+        assert_eq!(chosen.name, "llama-b1-bin-win-cpu-x64.zip");
+    }
+
+    #[test]
+    fn selects_macos_tar_gz() {
+        let assets = realistic_assets();
+        assert_eq!(
+            select_asset(&assets, "macos", "aarch64").unwrap().name,
+            "llama-b1-bin-macos-arm64.tar.gz"
+        );
+        assert_eq!(
+            select_asset(&assets, "macos", "x86_64").unwrap().name,
+            "llama-b1-bin-macos-x64.tar.gz"
+        );
+    }
+
+    #[test]
+    fn never_selects_accelerator_or_xcframework_builds() {
+        let assets = realistic_assets();
+        for (os, arch) in [
+            ("linux", "x86_64"),
+            ("windows", "x86_64"),
+            ("macos", "aarch64"),
+        ] {
+            let name = select_asset(&assets, os, arch).unwrap().name.to_lowercase();
+            for bad in ["cuda", "sycl", "rocm", "cudart", "xcframework", "vulkan"] {
+                assert!(!name.contains(bad), "{os}/{arch} picked {name}");
+            }
+        }
     }
 
     #[test]
     fn returns_none_when_no_platform_match() {
-        let assets = vec![asset("llama-b1-bin-macos-arm64.zip", 20)];
+        let assets = vec![asset("llama-b1-bin-macos-arm64.tar.gz", 20)];
         assert!(select_asset(&assets, "windows", "x86_64").is_none());
     }
 }
