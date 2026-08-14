@@ -7,7 +7,7 @@ resolver = "2"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-repository = "https://github.com/placeholder/turkmenai-local"
+repository = "https://github.com/ambartsumov/turkmenai-local"
 
 [workspace.dependencies]
 serde = { version = "1.0", features = ["derive"] }
