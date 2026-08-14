@@ -20,7 +20,9 @@ jobs:
       - run: pnpm run check
       - run: pnpm run build
       - run: node scripts/check-i18n.mjs
-      - run: cargo test --workspace
+      # Exclude the Tauri desktop shell: it needs GTK/webkit system libs that are
+      # only installed in the `native` matrix below (which cargo-checks it per-OS).
+      - run: cargo test --workspace --exclude turkmenai-desktop
       - run: cargo fmt --all -- --check
 
   native:
