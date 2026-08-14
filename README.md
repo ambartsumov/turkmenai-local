@@ -4,7 +4,7 @@
 
 TurkmenAI Local is an **offline-first desktop control plane** for discovering compatible local AI models, selecting an explainable execution plan, managing verified model files and exposing a private loopback API. It is designed so that complex compatibility logic stays inside the product while the public-facing contract stays direct: **download once, work locally, and never silently send inference to the cloud.**
 
-**Website:** [turkmenai.tech](https://turkmenai.tech) (DNS pending — see [DOMAIN_SETUP.md](DOMAIN_SETUP.md); interim mirror: [turkmenai-lxyvv4qu.manus.space](https://turkmenai-lxyvv4qu.manus.space))  
+**Website:** [turkmenai.tech](https://turkmenai.tech) — hosted on GitHub Pages (add the Namecheap DNS records in [DOMAIN_SETUP.md](DOMAIN_SETUP.md) to activate the custom domain; the site is already live at [ambartsumov.github.io/turkmenai-local](https://ambartsumov.github.io/turkmenai-local)).  
 **Release channel:** `0.1.0` experimental / pre-1.0  
 **Launch status:** Read [FINAL_LAUNCH_AUDIT.md](FINAL_LAUNCH_AUDIT.md) before treating this as a general-availability installer.
 
