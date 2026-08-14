@@ -34,6 +34,9 @@ jobs:
             label: macOS-arm64
             os: macos-14
     runs-on: ${{ matrix.os }}
+    # Cap a stuck leg (e.g. scarce macos-13 x64 runners) so it fails instead of
+    # blocking the whole release; other platforms still publish.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -85,7 +88,10 @@ jobs:
   publish:
     name: Publish GitHub Release
     needs: bundle
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Publish whatever built: a single scarce runner (macOS x64) must not withhold
+    # the artifacts that succeeded. The site's download matrix is generated from the
+    # assets that actually exist, so missing platforms stay honestly "building".
+    if: ${{ always() && startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/download-artifact@v4
