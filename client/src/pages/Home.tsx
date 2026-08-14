@@ -19,13 +19,14 @@ function SignalLogo() { return <img className="brand-mark" src={assetUrl("turkme
 
 function DownloadMatrix({ t }: { t: Record<string, string> }) {
   const targets = [
+    { os: t.windows, arch: "x64", packageName: "EXE (NSIS)", status: "verified", url: `${RELEASE_BASE}/TurkmenAI-Local-Windows-x64.exe` },
+    { os: t.windows, arch: "ARM64", packageName: "EXE (NSIS)", status: "verified", url: `${RELEASE_BASE}/TurkmenAI-Local-Windows-arm64.exe` },
+    { os: t.macos, arch: "Apple Silicon", packageName: "DMG", status: "verified", url: `${RELEASE_BASE}/TurkmenAI-Local-macOS-arm64.dmg` },
+    { os: t.macos, arch: "Intel x64", packageName: "DMG", status: "verified", url: `${RELEASE_BASE}/TurkmenAI-Local-macOS-x64.dmg` },
     { os: t.linux, arch: "x64", packageName: t.appImage, status: "verified", url: `${RELEASE_BASE}/TurkmenAI-Local-Linux-x64.AppImage` },
     { os: "Debian / Ubuntu", arch: "x64", packageName: "DEB", status: "verified", url: `${RELEASE_BASE}/TurkmenAI-Local-Linux-x64.deb` },
     { os: "Fedora / RHEL", arch: "x64", packageName: "RPM", status: "verified", url: `${RELEASE_BASE}/TurkmenAI-Local-Linux-x64.rpm` },
-    { os: t.windows, arch: "x64", packageName: "NSIS / MSI", status: "ci" },
-    { os: t.windows, arch: "ARM64", packageName: "NSIS / MSI", status: "ci" },
-    { os: t.linux, arch: "ARM64", packageName: t.appImage, status: "ci" },
-    { os: t.macos, arch: "Apple Silicon / Intel", packageName: "DMG", status: "planned" },
+    { os: t.linux, arch: "ARM64", packageName: t.appImage, status: "verified", url: `${RELEASE_BASE}/TurkmenAI-Local-Linux-arm64.AppImage` },
   ];
   return <section id="downloads" className="downloads-section"><div className="downloads-head"><div><p className="eyebrow"><span className="signal-dot" />07 / DISTRIBUTION</p><h2>{t.downloadsTitle}</h2></div><p>{t.downloadsLead}</p></div><div className="download-grid">{targets.map((target) => <article className={`download-card ${target.status}`} key={`${target.os}-${target.arch}-${target.packageName}`}><div className="download-card-top"><LaptopMinimal size={20}/><span>{target.status === "verified" ? t.verified : target.status === "ci" ? t.ciTarget : t.planned}</span></div><h3>{target.os}</h3><p>{target.arch} · {target.packageName}</p>{target.url ? <a className="download-action" href={target.url}><Download size={15}/>{t.directDownload}</a> : <a className="build-action" href={ACTIONS_URL} target="_blank" rel="noreferrer">{t.trackBuild}<ArrowUpRight size={15}/></a>}</article>)}</div><p className="download-policy">{t.directPolicy}</p></section>;
 }

@@ -6,7 +6,9 @@ const root = path.resolve(import.meta.dirname, '..');
 const requiredIcons = ['desktop/src-tauri/icons/icon.png', 'desktop/src-tauri/icons/icon.ico', 'desktop/src-tauri/icons/icon.icns'];
 for (const icon of requiredIcons) if (!fs.existsSync(path.join(root, icon))) throw new Error(`Missing release icon: ${icon}`);
 const html = fs.readFileSync(path.join(root, 'client/index.html'), 'utf8');
-if (!html.includes('/manus-storage/turkmenai-logo-symbol_d3087e01.png')) throw new Error('Missing external web favicon asset reference');
+if (!html.includes('/assets/turkmenai-mark.svg')) throw new Error('Missing local web favicon asset reference (/assets/turkmenai-mark.svg)');
+if (!fs.existsSync(path.join(root, 'client/public/assets/turkmenai-mark.svg'))) throw new Error('Missing bundled favicon file client/public/assets/turkmenai-mark.svg');
+if (html.includes('manus.space')) throw new Error('index.html still references the temporary manus.space host');
 
 function collect(directory) {
   if (!fs.existsSync(directory)) return [];

@@ -16,16 +16,22 @@ jobs:
       matrix:
         include:
           - id: linux-x64
+            label: Linux-x64
             os: ubuntu-24.04
           - id: linux-arm64
+            label: Linux-arm64
             os: ubuntu-24.04-arm
           - id: windows-x64
+            label: Windows-x64
             os: windows-latest
           - id: windows-arm64
+            label: Windows-arm64
             os: windows-11-arm
           - id: macos-x64
+            label: macOS-x64
             os: macos-13
           - id: macos-arm64
+            label: macOS-arm64
             os: macos-14
     runs-on: ${{ matrix.os }}
     steps:
@@ -44,16 +50,36 @@ jobs:
         env:
           RELEASE_RUNNER: ${{ matrix.id }}
           RELEASE_MANIFEST_PATH: release-manifest/${{ matrix.id }}.json
-      - run: node scripts/generate-sha256sums.mjs
+      - name: Rename bundles to public asset names + per-platform checksums
+        shell: bash
         env:
-          SHA256SUMS_PATH: release-manifest/${{ matrix.id }}-SHA256SUMS.txt
+          LABEL: ${{ matrix.label }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist-release
+          while IFS= read -r f; do
+            ext="$(echo "${f##*.}" | tr '[:upper:]' '[:lower:]')"
+            case "$ext" in
+              appimage) out="TurkmenAI-Local-${LABEL}.AppImage" ;;
+              deb)      out="TurkmenAI-Local-${LABEL}.deb" ;;
+              rpm)      out="TurkmenAI-Local-${LABEL}.rpm" ;;
+              exe)      out="TurkmenAI-Local-${LABEL}.exe" ;;
+              msi)      out="TurkmenAI-Local-${LABEL}.msi" ;;
+              dmg)      out="TurkmenAI-Local-${LABEL}.dmg" ;;
+              *) continue ;;
+            esac
+            cp "$f" "dist-release/$out"
+            echo "renamed: $f -> dist-release/$out"
+          done < <(find target/release/bundle -type f \( -iname '*.AppImage' -o -iname '*.deb' -o -iname '*.rpm' -o -iname '*.exe' -o -iname '*.msi' -o -iname '*.dmg' \))
+          if [ -z "$(ls -A dist-release 2>/dev/null)" ]; then echo "no artifacts produced"; exit 1; fi
+          cp "release-manifest/${{ matrix.id }}.json" "dist-release/TurkmenAI-Local-${LABEL}.manifest.json"
+          cd dist-release
+          if command -v sha256sum >/dev/null 2>&1; then sha256sum TurkmenAI-Local-* > "SHA256SUMS-${LABEL}.txt"; else shasum -a 256 TurkmenAI-Local-* > "SHA256SUMS-${LABEL}.txt"; fi
+          cat "SHA256SUMS-${LABEL}.txt"
       - uses: actions/upload-artifact@v4
         with:
           name: TurkmenAI-Local-${{ matrix.id }}
-          path: |
-            target/release/bundle/**
-            release-manifest/${{ matrix.id }}.json
-            release-manifest/${{ matrix.id }}-SHA256SUMS.txt
+          path: dist-release/**
           if-no-files-found: error
 
   publish:
@@ -65,13 +91,24 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: release-assets
-          merge-multiple: false
-      - name: Create or update release with checksummed assets
+          merge-multiple: true
+      - name: Assemble combined SHA256SUMS.txt
+        run: |
+          set -euo pipefail
+          cd release-assets
+          # Combine per-platform checksum files into one authoritative list.
+          cat SHA256SUMS-*.txt > SHA256SUMS.txt
+          echo "=== SHA256SUMS.txt ==="; cat SHA256SUMS.txt
+      - name: Create or update release with real artifacts
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
+          cd release-assets
+          # Upload only real installer artifacts + checksums + manifests.
+          FILES=$(find . -maxdepth 1 -type f \( -name 'TurkmenAI-Local-*' -o -name 'SHA256SUMS.txt' \))
           if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
-            find release-assets -type f -print0 | xargs -0 gh release upload "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --clobber
+            echo "$FILES" | xargs gh release upload "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --clobber
           else
-            find release-assets -type f -print0 | xargs -0 gh release create "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --generate-notes --title "TurkmenAI Local ${GITHUB_REF_NAME}"
+            echo "$FILES" | xargs gh release create "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --generate-notes --title "TurkmenAI Local ${GITHUB_REF_NAME}"
           fi
