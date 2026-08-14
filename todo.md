@@ -92,3 +92,10 @@
 - [ ] Add a GitHub Pages workflow that builds the existing public website from `client/` and uploads only the static site artifact.
 - [ ] Enable Pages for `ambartsumov/turkmenai-local` using GitHub Actions as the deployment source.
 - [ ] Verify the generated `github.io` URL, navigation, favicon and real Linux download links before presenting it as live.
+
+## Cross-platform native release execution
+
+- [ ] Diagnose and repair the latest native release workflow failures for Linux ARM64, Windows x64, Windows ARM64, macOS x64 and macOS ARM64.
+- [ ] Collect installer artifacts and SHA-256 manifests only from successful native runner jobs for each target platform.
+- [ ] Run the documented installation or smoke-test evidence available for every successful target before adding its direct download link.
+- [ ] Keep the public release marked prerelease and exclude unavailable platform assets until the complete verified matrix exists.
