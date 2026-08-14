@@ -206,7 +206,8 @@ function vitePluginStorageProxy(): Plugin {
 const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), vitePluginStorageProxy()];
 
 export default defineConfig({
-  base: process.env.GITHUB_PAGES === "true" ? "/turkmenai-local/" : "/",
+  // Served from the custom apex domain turkmenai.tech, not a github.io/<repo> subpath.
+  base: "/",
   plugins,
   resolve: {
     alias: {
