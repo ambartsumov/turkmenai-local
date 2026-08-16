@@ -103,3 +103,5 @@ footer{padding:39px clamp(20px,8vw,144px);background:#06101b;display:grid;grid-t
 .feature-card h3{font-size:20px;letter-spacing:-.045em;margin:34px 0 10px}
 .build-console-cta{display:flex;align-items:center;gap:12px;margin-top:34px;padding:16px 20px;border:1px solid #b7c5c2;background:#eef5f2;color:#35535a;font:700 12px "Space Mono",monospace;flex-wrap:wrap}
 .build-console-cta .inline-link{margin-top:0;margin-left:auto}
+.footer-diagnostics{font:700 10px "Space Mono",monospace;color:#5a6b74;letter-spacing:.04em;margin-top:10px}
+.footer-diagnostics a{color:#006f6b;display:inline-flex;align-items:center;gap:4px}
