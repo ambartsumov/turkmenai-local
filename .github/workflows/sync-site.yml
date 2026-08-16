@@ -1,13 +1,16 @@
 name: Sync website to release
 
-# One product, one source of truth. When a GitHub Release is published, the
-# website download data is regenerated from the REAL uploaded assets and, if it
-# changed, committed to main — which triggers the Pages deploy. No human ever
-# hand-edits download links or version strings on the site.
+# One product, one source of truth. After a release build finishes, regenerate
+# the website's download data from the REAL published assets and deploy the site
+# — all in one job. We trigger on `workflow_run` (not `on: release`) because a
+# release published by GITHUB_TOKEN does NOT fire `on: release`; workflow_run
+# fires regardless. The deploy happens inline here so it does not depend on a
+# further (also GITHUB_TOKEN-suppressed) push trigger.
 
 on:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       tag:
@@ -16,42 +19,64 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
-  group: sync-site
+  group: github-pages
   cancel-in-progress: false
 
 jobs:
   sync:
+    # On workflow_run, only proceed if the release build actually succeeded.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22 }
-      - name: Resolve tag
+        with: { node-version: 22, cache: pnpm }
+      - name: Resolve release tag
         id: tag
-        run: echo "value=${{ github.event.release.tag_name || inputs.tag }}" >> "$GITHUB_OUTPUT"
+        run: echo "value=${{ github.event.workflow_run.head_branch || inputs.tag }}" >> "$GITHUB_OUTPUT"
       - name: Regenerate site release truth + machine-readable metadata
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           node scripts/generate-site-releases.mjs "${{ steps.tag.outputs.value }}"
           node scripts/generate-metadata.mjs "${{ steps.tag.outputs.value }}"
-      - name: Keep generated product data fresh
-        run: node scripts/sync-metadata.mjs
-      - name: Commit if the site data changed
+          node scripts/sync-metadata.mjs
+      - name: Commit regenerated data to main (if changed)
         run: |
           set -euo pipefail
           git config user.name  "turkmenai-bot"
           git config user.email "bot@users.noreply.github.com"
           paths="client/src/releases.ts client/src/generated/product.ts client/public/api PRODUCT_CHANGELOG.json product-status.json"
           if git diff --quiet -- $paths; then
-            echo "Website already reflects ${{ steps.tag.outputs.value }} — nothing to commit."
-            exit 0
+            echo "Site data already current for ${{ steps.tag.outputs.value }}."
+          else
+            git add $paths
+            git commit -m "chore(site): sync download matrix + metadata to ${{ steps.tag.outputs.value }}"
+            git push origin main
           fi
-          git add $paths
-          git commit -m "chore(site): sync download matrix + metadata to ${{ steps.tag.outputs.value }}"
-          git push origin main
+      - name: Build the website
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+          cp dist/public/index.html dist/public/404.html
+        env:
+          GITHUB_PAGES: 'true'
+      - name: Verify the site references the released tag
+        run: CHECK_LINKS=1 node scripts/check-consistency.mjs
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/public
+      - id: deployment
+        uses: actions/deploy-pages@v4
