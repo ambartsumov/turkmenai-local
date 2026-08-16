@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-16T12:09:48.396Z",
+  "generated_at": "2026-08-16T20:21:16.031Z",
   "product": "TurkmenAI Local",
   "identifier": "local.turkmenai.desktop",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "channel": "experimental",
   "repository": "https://github.com/ambartsumov/turkmenai-local",
   "website": "https://turkmenai.tech",

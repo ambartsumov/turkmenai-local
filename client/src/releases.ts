@@ -21,7 +21,7 @@ export type ReleaseInfo = {
 };
 
 export const releases: ReleaseInfo = {
-  "version": "0.2.0",
+  "version": "0.3.0",
   "actionsUrl": "https://github.com/ambartsumov/turkmenai-local/actions",
   "assets": [
     {
@@ -29,49 +29,49 @@ export const releases: ReleaseInfo = {
       "arch": "x64",
       "packageName": "AppImage",
       "status": "verified",
-      "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.2.0/TurkmenAI-Local-Linux-x64.AppImage"
+      "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.3.0/TurkmenAI-Local-Linux-x64.AppImage"
     },
     {
       "os": "Debian / Ubuntu",
       "arch": "x64",
       "packageName": "DEB",
       "status": "verified",
-      "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.2.0/TurkmenAI-Local-Linux-x64.deb"
+      "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.3.0/TurkmenAI-Local-Linux-x64.deb"
     },
     {
       "os": "Fedora / RHEL",
       "arch": "x64",
       "packageName": "RPM",
       "status": "verified",
-      "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.2.0/TurkmenAI-Local-Linux-x64.rpm"
+      "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.3.0/TurkmenAI-Local-Linux-x64.rpm"
     },
     {
       "os": "Linux",
       "arch": "ARM64",
       "packageName": "AppImage",
       "status": "verified",
-      "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.2.0/TurkmenAI-Local-Linux-arm64.AppImage"
+      "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.3.0/TurkmenAI-Local-Linux-arm64.AppImage"
     },
     {
       "os": "Windows 10 / 11",
       "arch": "x64",
       "packageName": "EXE (NSIS)",
-      "status": "building",
-      "url": null
+      "status": "verified",
+      "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.3.0/TurkmenAI-Local-Windows-x64.exe"
     },
     {
       "os": "Windows 10 / 11",
       "arch": "ARM64",
       "packageName": "EXE (NSIS)",
-      "status": "building",
-      "url": null
+      "status": "verified",
+      "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.3.0/TurkmenAI-Local-Windows-arm64.exe"
     },
     {
       "os": "macOS",
       "arch": "Apple Silicon",
       "packageName": "DMG",
       "status": "verified",
-      "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.2.0/TurkmenAI-Local-macOS-arm64.dmg"
+      "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.3.0/TurkmenAI-Local-macOS-arm64.dmg"
     },
     {
       "os": "macOS",

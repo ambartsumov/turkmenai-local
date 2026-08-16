@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "product": "TurkmenAI Local",
-  "version": "0.2.0",
-  "tag": "v0.2.0",
+  "version": "0.3.0",
+  "tag": "v0.3.0",
   "channel": "experimental",
-  "published_at": "2026-08-15T21:50:19Z",
-  "generated_at": "2026-08-16T12:09:48.396Z",
-  "release_url": "https://github.com/ambartsumov/turkmenai-local/releases/tag/v0.2.0",
+  "published_at": "2026-08-16T20:06:27Z",
+  "generated_at": "2026-08-16T20:21:16.031Z",
+  "release_url": "https://github.com/ambartsumov/turkmenai-local/releases/tag/v0.3.0",
   "platforms": [
     {
       "platform": "linux-x64",
@@ -14,21 +14,21 @@
       "artifacts": [
         {
           "package": "AppImage",
-          "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.2.0/TurkmenAI-Local-Linux-x64.AppImage",
-          "size": 79911416,
-          "sha256": "78cc13557d177d294f9100fe6137b7724cb051089215490202c5daf80cfaa42c"
+          "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.3.0/TurkmenAI-Local-Linux-x64.AppImage",
+          "size": 79497720,
+          "sha256": "f1290f5e6633f649ebf1635ab94aa63325f52b425da3cbe423daf3864718e8a3"
         },
         {
           "package": "DEB",
-          "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.2.0/TurkmenAI-Local-Linux-x64.deb",
-          "size": 5571686,
-          "sha256": "cc343cb71ad4070be191eb8a68551712037126e7047f8cb417db5958ba9b0f19"
+          "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.3.0/TurkmenAI-Local-Linux-x64.deb",
+          "size": 5126644,
+          "sha256": "ba1dc2340b0a6f6ac5b1d404417431e0a69604043e848e108c12cc72fc229276"
         },
         {
           "package": "RPM",
-          "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.2.0/TurkmenAI-Local-Linux-x64.rpm",
-          "size": 5572271,
-          "sha256": "b598a7938913f1c7109bc4b94829ecc5ecf1f3707853dfbd06ffd96be38f9932"
+          "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.3.0/TurkmenAI-Local-Linux-x64.rpm",
+          "size": 5127524,
+          "sha256": "c35a5e784eb9645f3409ec8c9249ae89622f594cc77a8e97739e56d2e3871d39"
         }
       ]
     },
@@ -38,21 +38,35 @@
       "artifacts": [
         {
           "package": "AppImage",
-          "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.2.0/TurkmenAI-Local-Linux-arm64.AppImage",
-          "size": 78223880,
-          "sha256": "b81f79ac22d805857738dd8f873fa0ad9cc5a101f24a6e20f52b5f95b11ec223"
+          "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.3.0/TurkmenAI-Local-Linux-arm64.AppImage",
+          "size": 77793800,
+          "sha256": "a63e3e4cbf8d3bf6932718f0583149ff07fa6032b9707f37cc516f3447128c20"
         }
       ]
     },
     {
       "platform": "windows-x64",
-      "status": "building",
-      "artifacts": []
+      "status": "verified",
+      "artifacts": [
+        {
+          "package": "EXE (NSIS)",
+          "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.3.0/TurkmenAI-Local-Windows-x64.exe",
+          "size": 3377667,
+          "sha256": "ef6211228f5656d67527f5ec73430a929492822df211867bd9e82ce6789020eb"
+        }
+      ]
     },
     {
       "platform": "windows-arm64",
-      "status": "building",
-      "artifacts": []
+      "status": "verified",
+      "artifacts": [
+        {
+          "package": "EXE (NSIS)",
+          "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.3.0/TurkmenAI-Local-Windows-arm64.exe",
+          "size": 3038845,
+          "sha256": "acf8ec2da92a776dc05bb3f3d18d504da85b5fd0d940636a382bf52192128527"
+        }
+      ]
     },
     {
       "platform": "macos-arm64",
@@ -60,9 +74,9 @@
       "artifacts": [
         {
           "package": "DMG",
-          "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.2.0/TurkmenAI-Local-macOS-arm64.dmg",
-          "size": 5508301,
-          "sha256": "81295f4cb23a05834c2de29523894bf7d7f3b885f992ecaa2b0af68ad08c7327"
+          "url": "https://github.com/ambartsumov/turkmenai-local/releases/download/v0.3.0/TurkmenAI-Local-macOS-arm64.dmg",
+          "size": 9127786,
+          "sha256": "bafc6d78f1054fb93a4f8fd7f419d182d468668306963732c9e4ff81c84397ce"
         }
       ]
     },

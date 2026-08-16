@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-16T12:09:48.396Z",
+  "generated_at": "2026-08-16T20:21:16.031Z",
   "features": [
     {
       "id": "hardware-detection",
@@ -133,7 +133,7 @@
     {
       "id": "benchmarks",
       "category": "performance",
-      "status": "planned",
+      "status": "beta",
       "since": "0.3.0",
       "name": {
         "en": "On-device benchmarks",
@@ -149,7 +149,7 @@
     {
       "id": "xet-transport",
       "category": "downloads",
-      "status": "planned",
+      "status": "experimental",
       "since": "0.3.0",
       "name": {
         "en": "Hugging Face Xet transport",
