@@ -20,6 +20,7 @@ pub mod provision;
 pub mod runtime;
 pub mod state;
 pub mod store;
+pub mod transfer;
 
 pub const MODEL_PLAN_SCHEMA_VERSION: u32 = 1;
 
