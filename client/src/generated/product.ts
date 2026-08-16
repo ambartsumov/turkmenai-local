@@ -34,7 +34,7 @@ export type Product = {
 
 export const product: Product = {
   "product": "TurkmenAI Local",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "channel": "experimental",
   "repository": "https://github.com/ambartsumov/turkmenai-local",
   "website": "https://turkmenai.tech",
@@ -196,7 +196,7 @@ export const features: Feature[] = [
   {
     "id": "benchmarks",
     "category": "performance",
-    "status": "planned",
+    "status": "beta",
     "since": "0.3.0",
     "name": {
       "en": "On-device benchmarks",
@@ -212,7 +212,7 @@ export const features: Feature[] = [
   {
     "id": "xet-transport",
     "category": "downloads",
-    "status": "planned",
+    "status": "experimental",
     "since": "0.3.0",
     "name": {
       "en": "Hugging Face Xet transport",

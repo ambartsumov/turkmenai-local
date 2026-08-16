@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.3.0 — 2026-08-16
+
+From control plane to a product you can actually run — and one product across
+repo, app and website.
+
+- **One-click model install**: pick a model in the catalog and the app does the
+  rest — resilient download with a live progress bar (real MB/s, reconnect count
+  on unstable links), SHA-256 verification, and the local model path handed to
+  the runtime so it is one step from chat. Nothing installs itself without your
+  pick.
+- **On-device benchmarks, in the console**: real download speed vs a *modelled*
+  no-resume client on the same link (the resume advantage is only claimed when
+  interruptions actually happened — no invented multipliers), plus inference
+  tokens/sec, time-to-first-token and RAM used for the model on your hardware.
+- **Managed Xet transport**: the app detects Hugging Face Xet (hf CLI + hf_xet)
+  and best-effort provisions it for accelerated downloads; when unavailable it
+  says so honestly with localized setup steps and keeps using the always-on
+  built-in downloader. Never a home-made slower Xet replacement.
+- **One product, one source of truth**: `metadata/*.json` drives the version
+  (Cargo/npm/Tauri), features and platforms; the website consumes generated
+  `/api/*.json` incl. `releases/latest.json` with real sizes and SHA-256; SEO
+  (JSON-LD, sitemap, robots) is generated; CI fails on version drift or stale
+  download links and the site auto-updates on release. No manual site edits.
+- **Windows bundles fixed**: the NSIS/MSI bundler now finds the `.ico` icon, so
+  Windows x64/ARM64 installers build again.
+
 ## 0.2.0 — 2026-08-15
 
 Adds the product surface the first release was missing, the honest way.

@@ -146,7 +146,7 @@ pub fn router(state: ApiState) -> Router {
 
 async fn health() -> Json<serde_json::Value> {
     Json(
-        serde_json::json!({"status":"ok","mode":"localhost","telemetry":"off","cloud_inference":"off","lan_sharing":"off","version":"0.2.0"}),
+        serde_json::json!({"status":"ok","mode":"localhost","telemetry":"off","cloud_inference":"off","lan_sharing":"off","version":env!("CARGO_PKG_VERSION")}),
     )
 }
 async fn hardware() -> Json<HardwareProfile> {

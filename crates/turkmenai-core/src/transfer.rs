@@ -29,7 +29,11 @@ pub struct LocalizedText {
 
 impl LocalizedText {
     fn of(en: &str, ru: &str, tk: &str) -> Self {
-        Self { en: en.into(), ru: ru.into(), tk: tk.into() }
+        Self {
+            en: en.into(),
+            ru: ru.into(),
+            tk: tk.into(),
+        }
     }
 }
 
@@ -91,8 +95,18 @@ fn xet_instructions() -> Vec<InstructionStep> {
 /// Parse a version string out of `hf version` / `huggingface-cli version` output.
 fn parse_version(raw: &str) -> Option<String> {
     raw.split_whitespace()
-        .find(|token| token.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false))
-        .map(|token| token.trim_matches(|c: char| !c.is_ascii_alphanumeric() && c != '.').to_string())
+        .find(|token| {
+            token
+                .chars()
+                .next()
+                .map(|c| c.is_ascii_digit())
+                .unwrap_or(false)
+        })
+        .map(|token| {
+            token
+                .trim_matches(|c: char| !c.is_ascii_alphanumeric() && c != '.')
+                .to_string()
+        })
         .filter(|version| !version.is_empty())
 }
 
@@ -178,10 +192,18 @@ pub fn provision() -> TransferStatus {
 
 /// Minimal cross-platform "is this binary on PATH" check.
 fn which(binary: &str) -> Option<String> {
-    let (probe, flag) = if cfg!(windows) { ("where", binary) } else { ("command", binary) };
+    let (probe, flag) = if cfg!(windows) {
+        ("where", binary)
+    } else {
+        ("command", binary)
+    };
     // `command -v` is a shell builtin; fall back to running the binary itself.
     if !cfg!(windows) {
-        if let Ok(out) = Command::new("sh").arg("-c").arg(format!("command -v {binary}")).output() {
+        if let Ok(out) = Command::new("sh")
+            .arg("-c")
+            .arg(format!("command -v {binary}"))
+            .output()
+        {
             if out.status.success() {
                 let path = String::from_utf8_lossy(&out.stdout).trim().to_string();
                 if !path.is_empty() {
@@ -193,7 +215,12 @@ fn which(binary: &str) -> Option<String> {
     }
     let out = Command::new(probe).arg(flag).output().ok()?;
     if out.status.success() {
-        let path = String::from_utf8_lossy(&out.stdout).lines().next().unwrap_or("").trim().to_string();
+        let path = String::from_utf8_lossy(&out.stdout)
+            .lines()
+            .next()
+            .unwrap_or("")
+            .trim()
+            .to_string();
         if !path.is_empty() {
             return Some(path);
         }
@@ -211,7 +238,11 @@ pub fn hf_download(
     local_dir: &std::path::Path,
 ) -> Result<std::path::PathBuf, String> {
     std::fs::create_dir_all(local_dir).map_err(|e| e.to_string())?;
-    let binary = if probe("hf").is_some() { "hf" } else { "huggingface-cli" };
+    let binary = if probe("hf").is_some() {
+        "hf"
+    } else {
+        "huggingface-cli"
+    };
     // `hf download <repo> <file> --revision <rev> --local-dir <dir>` writes the
     // file under local_dir preserving its repo-relative path.
     let status = Command::new(binary)
@@ -249,7 +280,10 @@ mod tests {
 
     #[test]
     fn parse_version_extracts_semverish() {
-        assert_eq!(parse_version("huggingface_hub version 0.35.1"), Some("0.35.1".into()));
+        assert_eq!(
+            parse_version("huggingface_hub version 0.35.1"),
+            Some("0.35.1".into())
+        );
         assert_eq!(parse_version("hf 1.0.0 (xet)"), Some("1.0.0".into()));
         assert_eq!(parse_version("no digits here"), None);
     }

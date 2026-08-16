@@ -100,7 +100,7 @@
     {
       "id": "benchmarks",
       "category": "performance",
-      "status": "planned",
+      "status": "beta",
       "since": "0.3.0",
       "name": { "en": "On-device benchmarks", "ru": "Бенчмарки на устройстве", "tk": "Enjamda bençmarklar" },
       "description": {
@@ -112,7 +112,7 @@
     {
       "id": "xet-transport",
       "category": "downloads",
-      "status": "planned",
+      "status": "experimental",
       "since": "0.3.0",
       "name": { "en": "Hugging Face Xet transport", "ru": "Транспорт Hugging Face Xet", "tk": "Hugging Face Xet transporty" },
       "description": {

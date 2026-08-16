@@ -31,10 +31,23 @@ pub struct DownloadBenchmark {
 }
 
 /// Build a download benchmark from a finished transfer's measured facts.
-pub fn download_benchmark(total_bytes: u64, elapsed_ms: u64, avg_bps: u64, interruptions: u32) -> DownloadBenchmark {
+pub fn download_benchmark(
+    total_bytes: u64,
+    elapsed_ms: u64,
+    avg_bps: u64,
+    interruptions: u32,
+) -> DownloadBenchmark {
     let (naive_estimate_ms, naive_would_complete, explanation) =
         model_naive(total_bytes, avg_bps, elapsed_ms, interruptions);
-    DownloadBenchmark { total_bytes, elapsed_ms, avg_bps, interruptions, naive_estimate_ms, naive_would_complete, explanation }
+    DownloadBenchmark {
+        total_bytes,
+        elapsed_ms,
+        avg_bps,
+        interruptions,
+        naive_estimate_ms,
+        naive_would_complete,
+        explanation,
+    }
 }
 
 /// The honest model. A naive client must transfer the whole file inside one
@@ -44,9 +57,18 @@ pub fn download_benchmark(total_bytes: u64, elapsed_ms: u64, avg_bps: u64, inter
 /// `p = e^(−k)`, so expected attempts ≈ `e^k` and a worst-case naive time is
 /// `T · e^k` (a full re-download per failed attempt). With `k = 0` there is no
 /// advantage to claim and the estimate equals our own transfer time.
-fn model_naive(total_bytes: u64, avg_bps: u64, elapsed_ms: u64, interruptions: u32) -> (Option<u64>, bool, String) {
+fn model_naive(
+    total_bytes: u64,
+    avg_bps: u64,
+    elapsed_ms: u64,
+    interruptions: u32,
+) -> (Option<u64>, bool, String) {
     if avg_bps == 0 || total_bytes == 0 {
-        return (None, true, "Transfer too small or too fast to model a baseline.".into());
+        return (
+            None,
+            true,
+            "Transfer too small or too fast to model a baseline.".into(),
+        );
     }
     let transfer_ms = (total_bytes as u128 * 1000 / avg_bps as u128) as u64;
     if interruptions == 0 {
@@ -98,7 +120,10 @@ pub fn inference_benchmark(
     let ttft = {
         let probe = json!({ "model": model, "messages": [{ "role": "user", "content": prompt }], "max_tokens": 1, "temperature": 0 });
         let start = Instant::now();
-        endpoint.chat(&probe).ok().map(|_| start.elapsed().as_millis() as u64)
+        endpoint
+            .chat(&probe)
+            .ok()
+            .map(|_| start.elapsed().as_millis() as u64)
     };
 
     let payload = json!({
@@ -116,8 +141,14 @@ pub fn inference_benchmark(
         .and_then(|u| u.get("completion_tokens"))
         .and_then(|v| v.as_u64())
         .unwrap_or_else(|| estimate_tokens(&response));
-    let prompt_tokens = usage.and_then(|u| u.get("prompt_tokens")).and_then(|v| v.as_u64());
-    let tokens_per_sec = if total_ms > 0 { generated_tokens as f64 * 1000.0 / total_ms as f64 } else { 0.0 };
+    let prompt_tokens = usage
+        .and_then(|u| u.get("prompt_tokens"))
+        .and_then(|v| v.as_u64());
+    let tokens_per_sec = if total_ms > 0 {
+        generated_tokens as f64 * 1000.0 / total_ms as f64
+    } else {
+        0.0
+    };
 
     let ram_after = available_ram_mib();
     let ram_used_mib = match (ram_before, ram_after) {
@@ -181,7 +212,10 @@ mod tests {
         // Same transfer but 4 interruptions survived → e^4 ≈ 54× worst case.
         let b = download_benchmark(100_000_000, 40_000, 10_000_000, 4);
         let naive = b.naive_estimate_ms.unwrap();
-        assert!(naive > 10_000 * 50, "naive should be ~54x the 10s transfer: {naive}");
+        assert!(
+            naive > 10_000 * 50,
+            "naive should be ~54x the 10s transfer: {naive}"
+        );
         // 8 interruptions → p_success = e^-8 ≈ 0.0003 < 2% → unlikely to ever finish.
         let hopeless = download_benchmark(100_000_000, 80_000, 10_000_000, 8);
         assert!(!hopeless.naive_would_complete);

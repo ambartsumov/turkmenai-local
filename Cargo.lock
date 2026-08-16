@@ -3766,7 +3766,7 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tmai"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -4040,7 +4040,7 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "turkmenai-api"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axum",
  "serde",
@@ -4052,7 +4052,7 @@ dependencies = [
 
 [[package]]
 name = "turkmenai-core"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "dirs",
  "flate2",
@@ -4069,7 +4069,7 @@ dependencies = [
 
 [[package]]
 name = "turkmenai-desktop"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "serde",
  "serde_json",

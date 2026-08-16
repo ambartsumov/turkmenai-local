@@ -83,7 +83,11 @@ fn install_via_builtin(
     })
 }
 
-fn install_via_xet(request: &InstallRequest, dest_dir: &Path, dest: &Path) -> Result<InstalledModel, CoreError> {
+fn install_via_xet(
+    request: &InstallRequest,
+    dest_dir: &Path,
+    dest: &Path,
+) -> Result<InstalledModel, CoreError> {
     let start = Instant::now();
     let path = transfer::hf_download(&request.repo, &request.file, &request.revision, dest_dir)
         .map_err(CoreError::UnsupportedSource)?;
@@ -101,7 +105,11 @@ fn install_via_xet(request: &InstallRequest, dest_dir: &Path, dest: &Path) -> Re
     if path != dest {
         let _ = std::fs::rename(&path, dest);
     }
-    let avg_bps = if elapsed_ms > 0 { (bytes as u128 * 1000 / elapsed_ms as u128) as u64 } else { 0 };
+    let avg_bps = if elapsed_ms > 0 {
+        (bytes as u128 * 1000 / elapsed_ms as u128) as u64
+    } else {
+        0
+    };
     // Xet manages its own retries internally, so we report 0 survived
     // interruptions here rather than inventing a resume advantage.
     Ok(InstalledModel {

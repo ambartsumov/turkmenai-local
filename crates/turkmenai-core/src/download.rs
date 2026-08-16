@@ -177,7 +177,15 @@ impl HttpDownloader {
             journal.error_code = None;
             journal.save(&journal_path)?;
 
-            match self.stream_once(url, &part, resume_from, &mut journal, &journal_path, started, on_progress) {
+            match self.stream_once(
+                url,
+                &part,
+                resume_from,
+                &mut journal,
+                &journal_path,
+                started,
+                on_progress,
+            ) {
                 Ok(Attempt::Eof) => {
                     // Done only if we have all bytes (when the total is known).
                     let complete = journal

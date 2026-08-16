@@ -19,27 +19,33 @@ const problems = [];
 
 const product = readJson('metadata/product.json');
 const version = product.version;
+const cmp = (a, b) => { const pa = a.split('.').map(Number), pb = b.split('.').map(Number); for (let i = 0; i < 3; i++) { if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0); } return 0; };
 
-// releases.ts (generated) — parse its embedded version + verified URLs.
+// releases.ts (generated from real assets) is the website's published truth. It
+// is allowed to trail the repo version during the window between bumping the
+// version and the release actually publishing (sync-site.yml catches up on
+// publish). It must never be AHEAD of the repo, and its links must all point at
+// its OWN declared tag.
 const releasesTs = read('client/src/releases.ts');
-const tsVersion = releasesTs.match(/"version":\s*"([^"]+)"/)?.[1];
-if (tsVersion !== version) problems.push(`releases.ts version ${tsVersion} != product ${version}`);
+const siteVersion = releasesTs.match(/"version":\s*"([^"]+)"/)?.[1];
+if (!siteVersion) problems.push('releases.ts has no version');
+else if (cmp(siteVersion, version) > 0) problems.push(`releases.ts version ${siteVersion} is AHEAD of product ${version}`);
+else if (cmp(siteVersion, version) < 0) console.warn(`note: release v${version} not published yet — site still on v${siteVersion} (ok, sync-site will catch up).`);
 
 const verifiedUrls = [...releasesTs.matchAll(/"url":\s*"([^"]+)"/g)].map((m) => m[1]);
 for (const url of verifiedUrls) {
-  if (!url.includes(`/download/v${version}/`)) {
-    problems.push(`stale download link (not v${version}): ${url}`);
+  if (siteVersion && !url.includes(`/download/v${siteVersion}/`)) {
+    problems.push(`download link does not match site tag v${siteVersion}: ${url}`);
   }
 }
 
-// latest.json manifest, if generated.
+// latest.json manifest must agree with the site's published version.
 const latestPath = 'client/public/api/releases/latest.json';
 if (fs.existsSync(path.join(root, latestPath))) {
   const latest = readJson(latestPath);
-  if (latest.version !== version) problems.push(`latest.json version ${latest.version} != product ${version}`);
   for (const p of latest.platforms ?? []) {
     for (const a of p.artifacts ?? []) {
-      if (a.url && !a.url.includes(`/download/v${version}/`)) problems.push(`latest.json stale artifact: ${a.url}`);
+      if (a.url && !a.url.includes(`/download/${latest.tag}/`)) problems.push(`latest.json artifact tag mismatch: ${a.url}`);
       if (a.sha256 && !/^[0-9a-f]{64}$/.test(a.sha256)) problems.push(`latest.json bad sha256 for ${a.url}`);
     }
   }

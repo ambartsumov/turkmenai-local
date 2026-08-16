@@ -123,7 +123,7 @@ fn hardware() -> HardwareProfile {
 fn desktop_status() -> DesktopStatus {
     DesktopStatus {
         platform: std::env::consts::OS.into(),
-        core_version: "0.2.0".into(),
+        core_version: env!("CARGO_PKG_VERSION").into(),
         loopback_default: true,
         telemetry: false,
     }
@@ -278,7 +278,10 @@ fn transfer_provision() -> TransferStatus {
 /// resiliently with live progress, verify the hash, return the local path and an
 /// honest download benchmark. Progress ticks stream over `on_progress`.
 #[tauri::command]
-fn model_install(request: InstallRequest, on_progress: Channel<Progress>) -> Result<InstalledModel, String> {
+fn model_install(
+    request: InstallRequest,
+    on_progress: Channel<Progress>,
+) -> Result<InstalledModel, String> {
     let dir = install::default_models_dir();
     install_model(&request, &dir, &mut |progress| {
         let _ = on_progress.send(progress);

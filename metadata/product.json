@@ -2,7 +2,7 @@
   "schema_version": 1,
   "product": "TurkmenAI Local",
   "identifier": "local.turkmenai.desktop",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "channel": "experimental",
   "repository": "https://github.com/ambartsumov/turkmenai-local",
   "website": "https://turkmenai.tech",
