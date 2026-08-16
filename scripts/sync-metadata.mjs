@@ -132,8 +132,11 @@ export const platforms: Platform[] = ${JSON.stringify(
     2,
   )};
 `;
+  // Compare line-ending-insensitively: on Windows git may check the file out
+  // with CRLF, which must not read as "stale" against our LF-generated body.
+  const lf = (s) => (s == null ? null : s.replace(/\r\n/g, '\n'));
   const current = fs.existsSync(abs) ? fs.readFileSync(abs, 'utf8') : null;
-  if (current !== body) {
+  if (lf(current) !== body) {
     problems.push('client/src/generated/product.ts is stale');
     writes.push([rel, body]);
   }
