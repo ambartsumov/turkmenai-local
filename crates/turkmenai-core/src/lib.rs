@@ -11,10 +11,12 @@ use std::{
 use thiserror::Error;
 use url::Url;
 
+pub mod bench;
 pub mod catalog;
 pub mod datasets;
 pub mod download;
 pub mod huggingface;
+pub mod install;
 pub mod llama;
 pub mod provision;
 pub mod runtime;

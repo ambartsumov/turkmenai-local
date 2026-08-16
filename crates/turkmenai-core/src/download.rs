@@ -10,7 +10,7 @@ use std::{
     fs,
     io::{Read, Write},
     path::{Path, PathBuf},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -40,6 +40,26 @@ pub struct DownloadJournal {
     /// the UI can honestly show "reconnecting" on unstable links.
     #[serde(default)]
     pub retries: u32,
+    /// Wall-clock time actually spent transferring, set on completion.
+    #[serde(default)]
+    pub elapsed_ms: Option<u64>,
+    /// Overall average throughput in bytes/sec, set on completion.
+    #[serde(default)]
+    pub avg_bps: Option<u64>,
+}
+
+/// A live progress tick, emitted roughly every few MiB during a download.
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct Progress {
+    pub bytes_downloaded: u64,
+    pub total_bytes: Option<u64>,
+    pub elapsed_ms: u64,
+    /// Instantaneous throughput since the previous tick (bytes/sec).
+    pub speed_bps: u64,
+    /// Overall average throughput so far (bytes/sec).
+    pub avg_bps: u64,
+    /// Interruptions survived so far (resumes), for an honest "reconnecting" UI.
+    pub retries: u32,
 }
 
 impl DownloadJournal {
@@ -54,6 +74,8 @@ impl DownloadJournal {
             state: DownloadState::Prepare,
             error_code: None,
             retries: 0,
+            elapsed_ms: None,
+            avg_bps: None,
         }
     }
 
@@ -123,6 +145,19 @@ impl HttpDownloader {
         destination: &Path,
         expected_sha256: Option<String>,
     ) -> Result<DownloadJournal, CoreError> {
+        self.download_with_progress(url, destination, expected_sha256, &mut |_| {})
+    }
+
+    /// Like [`Self::download`] but reports live [`Progress`] ticks (~every few
+    /// MiB) so a UI can show real speed on the user's actual link.
+    pub fn download_with_progress(
+        &self,
+        url: &str,
+        destination: &Path,
+        expected_sha256: Option<String>,
+        on_progress: &mut dyn FnMut(Progress),
+    ) -> Result<DownloadJournal, CoreError> {
+        let started = Instant::now();
         let part = destination.with_extension("part");
         let journal_path = destination.with_extension("download.json");
         // Reuse an existing journal for the same URL so total size / retry counts
@@ -142,7 +177,7 @@ impl HttpDownloader {
             journal.error_code = None;
             journal.save(&journal_path)?;
 
-            match self.stream_once(url, &part, resume_from, &mut journal, &journal_path) {
+            match self.stream_once(url, &part, resume_from, &mut journal, &journal_path, started, on_progress) {
                 Ok(Attempt::Eof) => {
                     // Done only if we have all bytes (when the total is known).
                     let complete = journal
@@ -190,6 +225,9 @@ impl HttpDownloader {
             backoff_ms = (backoff_ms * 2).min(30_000);
         }
 
+        let elapsed_ms = started.elapsed().as_millis() as u64;
+        journal.elapsed_ms = Some(elapsed_ms);
+        journal.avg_bps = Some(bps(journal.bytes_downloaded, elapsed_ms));
         journal.state = DownloadState::Verifying;
         journal.save(&journal_path)?;
         if let Some(expected) = &journal.expected_sha256 {
@@ -209,6 +247,7 @@ impl HttpDownloader {
 
     /// One streaming pass, resuming from `resume_from` bytes via an HTTP Range
     /// request. Returns on clean EOF or classifies the failure for the retry loop.
+    #[allow(clippy::too_many_arguments)]
     fn stream_once(
         &self,
         url: &str,
@@ -216,6 +255,8 @@ impl HttpDownloader {
         resume_from: u64,
         journal: &mut DownloadJournal,
         journal_path: &Path,
+        started: Instant,
+        on_progress: &mut dyn FnMut(Progress),
     ) -> Result<Attempt, AttemptError> {
         let mut request = self.client.get(url);
         if resume_from > 0 {
@@ -268,6 +309,8 @@ impl HttpDownloader {
 
         let mut buffer = vec![0_u8; self.chunk_bytes];
         let mut since_flush = 0u64;
+        let mut tick_at = Instant::now();
+        let mut tick_bytes = journal.bytes_downloaded;
         loop {
             let count = match response.read(&mut buffer) {
                 Ok(count) => count,
@@ -293,6 +336,21 @@ impl HttpDownloader {
                 let _ = output.flush();
                 let _ = journal.save(journal_path);
                 since_flush = 0;
+                // Emit a live progress tick with instantaneous + overall speed.
+                let now = Instant::now();
+                let dt_ms = now.duration_since(tick_at).as_millis() as u64;
+                let speed_bps = bps(journal.bytes_downloaded.saturating_sub(tick_bytes), dt_ms);
+                let elapsed_ms = now.duration_since(started).as_millis() as u64;
+                on_progress(Progress {
+                    bytes_downloaded: journal.bytes_downloaded,
+                    total_bytes: journal.total_bytes,
+                    elapsed_ms,
+                    speed_bps,
+                    avg_bps: bps(journal.bytes_downloaded, elapsed_ms),
+                    retries: journal.retries,
+                });
+                tick_at = now;
+                tick_bytes = journal.bytes_downloaded;
             }
         }
         output
@@ -301,6 +359,14 @@ impl HttpDownloader {
         let _ = journal.save(journal_path);
         Ok(Attempt::Eof)
     }
+}
+
+/// Bytes/sec from a byte count over a millisecond interval (0 when no time yet).
+fn bps(bytes: u64, elapsed_ms: u64) -> u64 {
+    if elapsed_ms == 0 {
+        return 0;
+    }
+    (bytes as u128 * 1000 / elapsed_ms as u128) as u64
 }
 
 /// Small randomized jitter (up to ~30% of the backoff) to avoid synchronized
