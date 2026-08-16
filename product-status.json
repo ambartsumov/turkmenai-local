@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "product": "TurkmenAI Local",
+  "version": "0.2.0",
+  "channel": "experimental",
+  "release_tag": "v0.2.0",
+  "generated_at": "2026-08-16T12:09:48.396Z",
+  "repository_commit": "6efe3d3e3c6f663b21482ec3257ff544e1c17bea",
+  "platforms_available": [
+    "linux-x64",
+    "linux-arm64",
+    "macos-arm64"
+  ],
+  "feature_counts": {
+    "stable": 4,
+    "experimental": 3,
+    "beta": 1,
+    "planned": 3
+  },
+  "planned_not_yet_available": [
+    "benchmarks",
+    "xet-transport",
+    "training-advisor"
+  ]
+}

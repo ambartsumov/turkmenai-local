@@ -5,57 +5,23 @@
  *
  * Usage:
  *   node scripts/generate-site-releases.mjs <tag> [owner/repo]
- * Requires the GitHub CLI (`gh`) to be authenticated, or a GH_TOKEN env var.
- *
- * All eight matrix targets are always listed; only those with a matching
- * uploaded asset become `verified` with a direct URL. The rest stay `building`.
+ * Requires the GitHub CLI (`gh`) authenticated, or a GH_TOKEN env var.
  */
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { REPO, resolveAssets } from './lib/releases.mjs';
 
 const tag = process.argv[2];
-const repo = process.argv[3] || 'ambartsumov/turkmenai-local';
+const repo = process.argv[3] || REPO;
 if (!tag) {
   console.error('Usage: node scripts/generate-site-releases.mjs <tag> [owner/repo]');
   process.exit(2);
 }
 
-// The eight matrix targets, in display order, mapped to their published filenames.
-const TARGETS = [
-  { os: 'Linux', arch: 'x64', packageName: 'AppImage', file: 'TurkmenAI-Local-Linux-x64.AppImage' },
-  { os: 'Debian / Ubuntu', arch: 'x64', packageName: 'DEB', file: 'TurkmenAI-Local-Linux-x64.deb' },
-  { os: 'Fedora / RHEL', arch: 'x64', packageName: 'RPM', file: 'TurkmenAI-Local-Linux-x64.rpm' },
-  { os: 'Linux', arch: 'ARM64', packageName: 'AppImage', file: 'TurkmenAI-Local-Linux-arm64.AppImage' },
-  { os: 'Windows 10 / 11', arch: 'x64', packageName: 'EXE (NSIS)', file: 'TurkmenAI-Local-Windows-x64.exe' },
-  { os: 'Windows 10 / 11', arch: 'ARM64', packageName: 'EXE (NSIS)', file: 'TurkmenAI-Local-Windows-arm64.exe' },
-  { os: 'macOS', arch: 'Apple Silicon', packageName: 'DMG', file: 'TurkmenAI-Local-macOS-arm64.dmg' },
-  { os: 'macOS', arch: 'Intel x64', packageName: 'DMG', file: 'TurkmenAI-Local-macOS-x64.dmg' },
-];
-
-let assetNames = new Set();
-try {
-  const raw = execFileSync('gh', ['release', 'view', tag, '--repo', repo, '--json', 'assets'], { encoding: 'utf8' });
-  assetNames = new Set(JSON.parse(raw).assets.map((asset) => asset.name));
-} catch (error) {
-  console.error(`Could not read release ${tag} from ${repo}: ${error.message}`);
-  console.error('No release found — writing all targets as "building".');
-}
-
-const base = `https://github.com/${repo}/releases/download/${tag}`;
-const assets = TARGETS.map((target) => {
-  const verified = assetNames.has(target.file);
-  return {
-    os: target.os,
-    arch: target.arch,
-    packageName: target.packageName,
-    status: verified ? 'verified' : 'building',
-    url: verified ? `${base}/${target.file}` : null,
-  };
-});
-
+const { assets } = resolveAssets(tag, repo);
 const version = tag.replace(/^v/, '');
-const verifiedCount = assets.filter((a) => a.status === 'verified').length;
+const rows = assets.map(({ os, arch, packageName, status, url }) => ({ os, arch, packageName, status, url }));
+const verifiedCount = rows.filter((a) => a.status === 'verified').length;
 
 const body = `/**
  * Release truth for the website download matrix.
@@ -80,11 +46,7 @@ export type ReleaseInfo = {
 };
 
 export const releases: ReleaseInfo = ${JSON.stringify(
-  {
-    version,
-    actionsUrl: `https://github.com/${repo}/actions`,
-    assets,
-  },
+  { version, actionsUrl: `https://github.com/${repo}/actions`, assets: rows },
   null,
   2,
 )};
@@ -92,4 +54,4 @@ export const releases: ReleaseInfo = ${JSON.stringify(
 
 const output = path.resolve(import.meta.dirname, '..', 'client', 'src', 'releases.ts');
 fs.writeFileSync(output, body);
-console.log(`Wrote ${output}: ${verifiedCount}/${assets.length} targets verified for ${tag}.`);
+console.log(`Wrote ${output}: ${verifiedCount}/${rows.length} targets verified for ${tag}.`);

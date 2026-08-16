@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-16T12:09:48.396Z",
+  "versions": [
+    {
+      "version": "0.3.0",
+      "features": [
+        {
+          "id": "benchmarks",
+          "name": "On-device benchmarks",
+          "category": "performance",
+          "status": "planned"
+        },
+        {
+          "id": "xet-transport",
+          "name": "Hugging Face Xet transport",
+          "category": "downloads",
+          "status": "planned"
+        },
+        {
+          "id": "training-advisor",
+          "name": "Training Advisor",
+          "category": "training",
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "version": "0.2.0",
+      "features": [
+        {
+          "id": "model-catalog",
+          "name": "Hugging Face model catalog",
+          "category": "models",
+          "status": "experimental"
+        },
+        {
+          "id": "dataset-catalog",
+          "name": "Hugging Face dataset catalog",
+          "category": "datasets",
+          "status": "experimental"
+        },
+        {
+          "id": "managed-engine",
+          "name": "Managed llama.cpp engine",
+          "category": "core",
+          "status": "experimental"
+        },
+        {
+          "id": "resilient-downloader",
+          "name": "Resilient downloader",
+          "category": "downloads",
+          "status": "stable"
+        }
+      ]
+    },
+    {
+      "version": "0.1.0",
+      "features": [
+        {
+          "id": "hardware-detection",
+          "name": "Hardware detection",
+          "category": "core",
+          "status": "stable"
+        },
+        {
+          "id": "execution-planner",
+          "name": "Capability-driven planner",
+          "category": "core",
+          "status": "stable"
+        },
+        {
+          "id": "content-store",
+          "name": "Content-addressed store",
+          "category": "core",
+          "status": "stable"
+        },
+        {
+          "id": "local-api",
+          "name": "Loopback local API",
+          "category": "core",
+          "status": "beta"
+        }
+      ]
+    }
+  ]
+}

@@ -20,6 +20,9 @@ jobs:
       - run: pnpm run check
       - run: pnpm run build
       - run: node scripts/check-i18n.mjs
+      # One product: versions and download links must agree across repo, site
+      # and the generated release manifest, and no link may point at a stale tag.
+      - run: node scripts/check-consistency.mjs
       # Exclude the Tauri desktop shell: it needs GTK/webkit system libs that are
       # only installed in the `native` matrix below (which cargo-checks it per-OS).
       - run: cargo test --workspace --exclude turkmenai-desktop

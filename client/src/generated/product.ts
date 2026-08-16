@@ -37,7 +37,7 @@ export const product: Product = {
   "version": "0.2.0",
   "channel": "experimental",
   "repository": "https://github.com/ambartsumov/turkmenai-local",
-  "website": "https://ambartsumov.github.io/turkmenai-local",
+  "website": "https://turkmenai.tech",
   "tagline": {
     "en": "Local AI. Built for Turkmenistan.",
     "ru": "Локальный ИИ. Создан для Туркменистана.",

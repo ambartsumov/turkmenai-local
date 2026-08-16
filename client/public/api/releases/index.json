@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "latest": {
+    "version": "0.2.0",
+    "tag": "v0.2.0",
+    "channel": "experimental"
+  },
+  "releases": [
+    {
+      "version": "0.2.0",
+      "tag": "v0.2.0",
+      "channel": "experimental",
+      "published_at": "2026-08-15T21:50:19Z",
+      "url": "https://github.com/ambartsumov/turkmenai-local/releases/tag/v0.2.0"
+    }
+  ]
+}

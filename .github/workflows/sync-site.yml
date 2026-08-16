@@ -34,10 +34,12 @@ jobs:
       - name: Resolve tag
         id: tag
         run: echo "value=${{ github.event.release.tag_name || inputs.tag }}" >> "$GITHUB_OUTPUT"
-      - name: Regenerate site release truth from real assets
+      - name: Regenerate site release truth + machine-readable metadata
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/generate-site-releases.mjs "${{ steps.tag.outputs.value }}"
+        run: |
+          node scripts/generate-site-releases.mjs "${{ steps.tag.outputs.value }}"
+          node scripts/generate-metadata.mjs "${{ steps.tag.outputs.value }}"
       - name: Keep generated product data fresh
         run: node scripts/sync-metadata.mjs
       - name: Commit if the site data changed
@@ -45,10 +47,11 @@ jobs:
           set -euo pipefail
           git config user.name  "turkmenai-bot"
           git config user.email "bot@users.noreply.github.com"
-          if git diff --quiet -- client/src/releases.ts client/src/generated/product.ts; then
+          paths="client/src/releases.ts client/src/generated/product.ts client/public/api PRODUCT_CHANGELOG.json product-status.json"
+          if git diff --quiet -- $paths; then
             echo "Website already reflects ${{ steps.tag.outputs.value }} — nothing to commit."
             exit 0
           fi
-          git add client/src/releases.ts client/src/generated/product.ts
-          git commit -m "chore(site): sync download matrix + product data to ${{ steps.tag.outputs.value }}"
+          git add $paths
+          git commit -m "chore(site): sync download matrix + metadata to ${{ steps.tag.outputs.value }}"
           git push origin main

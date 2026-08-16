@@ -1,0 +1,182 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-16T12:09:48.396Z",
+  "features": [
+    {
+      "id": "hardware-detection",
+      "category": "core",
+      "status": "stable",
+      "since": "0.1.0",
+      "name": {
+        "en": "Hardware detection",
+        "ru": "Определение оборудования",
+        "tk": "Enjam kesgitlemesi"
+      },
+      "description": {
+        "en": "Reads a local profile of RAM, GPU/VRAM and storage. Nothing is sent to the cloud.",
+        "ru": "Считывает локальный профиль RAM, GPU/VRAM и накопителей. Ничего не отправляется в облако.",
+        "tk": "RAM, GPU/VRAM we diskleriň ýerli profilini okaýar. Hiç zat buluda iberilmeýär."
+      }
+    },
+    {
+      "id": "execution-planner",
+      "category": "core",
+      "status": "stable",
+      "since": "0.1.0",
+      "name": {
+        "en": "Capability-driven planner",
+        "ru": "Планировщик по возможностям",
+        "tk": "Mümkinçilige esaslanýan meýilleşdiriji"
+      },
+      "description": {
+        "en": "Resolver, execution graph, Model Doctor and safe fallback plans. Original model files are never changed automatically.",
+        "ru": "Resolver, граф выполнения, Model Doctor и безопасные fallback-планы. Исходные файлы моделей не меняются автоматически.",
+        "tk": "Resolver, ýerine ýetiriş grafy, Model Doctor we howpsuz fallback meýilnamalary. Asyl model faýllary awtomatiki üýtgedilmeýär."
+      }
+    },
+    {
+      "id": "model-catalog",
+      "category": "models",
+      "status": "experimental",
+      "since": "0.2.0",
+      "name": {
+        "en": "Hugging Face model catalog",
+        "ru": "Каталог моделей Hugging Face",
+        "tk": "Hugging Face model kataglogy"
+      },
+      "description": {
+        "en": "Discovers models from Hugging Face by specialization (chat, reasoning, code, translation, speech, embeddings), ranks them against your hardware, and shows three-language cards (RU/TK/EN). You choose — nothing installs itself.",
+        "ru": "Находит модели на Hugging Face по специализации (чат, рассуждение, код, перевод, речь, эмбеддинги), ранжирует под ваше железо и показывает карточки на трёх языках (RU/TK/EN). Выбираете вы — ничего не ставится само.",
+        "tk": "Modelleri Hugging Face-den ugur boýunça (çat, pikirlenme, kod, terjime, ses, embedding) tapýar, enjamyňyza görä tertipleýär we üç dilde (RU/TK/EN) kartoçkalary görkezýär. Siz saýlaýarsyňyz — hiç zat özi gurulmaýar."
+      }
+    },
+    {
+      "id": "dataset-catalog",
+      "category": "datasets",
+      "status": "experimental",
+      "since": "0.2.0",
+      "name": {
+        "en": "Hugging Face dataset catalog",
+        "ru": "Каталог датасетов Hugging Face",
+        "tk": "Hugging Face dater kataglogy"
+      },
+      "description": {
+        "en": "Discovers datasets from Hugging Face by specialization with license/risk flags and free-disk checks, in three languages.",
+        "ru": "Находит датасеты на Hugging Face по специализации с флагами лицензии/риска и проверкой места на диске, на трёх языках.",
+        "tk": "Datalary Hugging Face-den ugur boýunça, ygtyýarnama/töwekgelçilik belgileri we boş disk barlagy bilen, üç dilde tapýar."
+      }
+    },
+    {
+      "id": "managed-engine",
+      "category": "core",
+      "status": "experimental",
+      "since": "0.2.0",
+      "name": {
+        "en": "Managed llama.cpp engine",
+        "ru": "Управляемый движок llama.cpp",
+        "tk": "Dolandyrylýan llama.cpp hereketlendirijisi"
+      },
+      "description": {
+        "en": "The app downloads the official llama.cpp build for your platform, prefers the driver-free CPU build, verifies and unpacks it. No manual llama-server path.",
+        "ru": "Приложение само скачивает официальную сборку llama.cpp под вашу платформу, предпочитает CPU-сборку без драйверов, проверяет и распаковывает. Никакого ручного пути к llama-server.",
+        "tk": "Programma platformaňyz üçin resmi llama.cpp gurluşyny özi ýükleýär, draýwersiz CPU gurluşyny saýlaýar, barlaýar we açýar. El bilen llama-server ýoly ýok."
+      }
+    },
+    {
+      "id": "resilient-downloader",
+      "category": "downloads",
+      "status": "stable",
+      "since": "0.2.0",
+      "name": {
+        "en": "Resilient downloader",
+        "ru": "Устойчивый загрузчик",
+        "tk": "Durnukly ýükleýji"
+      },
+      "description": {
+        "en": "For slow/unstable links: resumable HTTP Range, TCP keep-alive, exponential backoff with jitter, no fatal total timeout, crash-safe journaling — you never lose progress on a drop.",
+        "ru": "Для медленных/нестабильных каналов: докачка по HTTP Range, TCP keep-alive, экспоненциальные повторы с jitter, без фатального общего таймаута, журнал против сбоев — прогресс не теряется при обрыве.",
+        "tk": "Haýal/durnuksyz baglanyşyklar üçin: HTTP Range dowam etdirmek, TCP keep-alive, jitter bilen gaýtalama, umumy fatal taým-aut ýok, näsazlyga garşy žurnal — üzülmede öňegidiş ýitmeýär."
+      }
+    },
+    {
+      "id": "content-store",
+      "category": "core",
+      "status": "stable",
+      "since": "0.1.0",
+      "name": {
+        "en": "Content-addressed store",
+        "ru": "Контентно-адресуемое хранилище",
+        "tk": "Mazmuna salgylanýan ammar"
+      },
+      "description": {
+        "en": "SHA-256 immutable blobs — every downloaded artifact is hash-verified.",
+        "ru": "Неизменяемые блобы SHA-256 — каждый скачанный артефакт проверяется по хешу.",
+        "tk": "SHA-256 üýtgemeýän bloblar — her ýüklenen artifakt heş boýunça barlanýar."
+      }
+    },
+    {
+      "id": "local-api",
+      "category": "core",
+      "status": "beta",
+      "since": "0.1.0",
+      "name": {
+        "en": "Loopback local API",
+        "ru": "Локальный API на loopback",
+        "tk": "Loopback ýerli API"
+      },
+      "description": {
+        "en": "Native endpoints available only on 127.0.0.1. The OpenAI-compatible inference endpoint activates once a verified runtime is running.",
+        "ru": "Нативные эндпоинты доступны только на 127.0.0.1. OpenAI-совместимый inference-эндпоинт включается после запуска проверенного runtime.",
+        "tk": "Native endpointler diňe 127.0.0.1-de elýeterli. OpenAI-gabat gelýän inference endpoint barlanan runtime işläninden soň işjeňleşýär."
+      }
+    },
+    {
+      "id": "benchmarks",
+      "category": "performance",
+      "status": "planned",
+      "since": "0.3.0",
+      "name": {
+        "en": "On-device benchmarks",
+        "ru": "Бенчмарки на устройстве",
+        "tk": "Enjamda bençmarklar"
+      },
+      "description": {
+        "en": "Console shows real download speed vs a modelled naive client, plus inference tokens/sec, first-token latency and CPU/RAM reaction for the model on your hardware.",
+        "ru": "Консоль показывает реальную скорость скачивания против смоделированного наивного клиента, а также tokens/sec, задержку первого токена и реакцию CPU/RAM для модели на вашем железе.",
+        "tk": "Konsol hakyky ýükleme tizligini modellenen sada müşderä garşy, şeýle hem model üçin tokens/sek, ilkinji token gijä galmasy we CPU/RAM täsirini görkezýär."
+      }
+    },
+    {
+      "id": "xet-transport",
+      "category": "downloads",
+      "status": "planned",
+      "since": "0.3.0",
+      "name": {
+        "en": "Hugging Face Xet transport",
+        "ru": "Транспорт Hugging Face Xet",
+        "tk": "Hugging Face Xet transporty"
+      },
+      "description": {
+        "en": "Chunk-level deduplication and adaptive concurrency via hf_xet for faster downloads, layered under our resilient resume/cache.",
+        "ru": "Дедупликация на уровне чанков и adaptive concurrency через hf_xet для ускорения загрузок поверх нашего устойчивого resume/cache.",
+        "tk": "Çalt ýüklemeler üçin hf_xet arkaly çank derejesinde deduplikasiýa we adaptiw parallellik, biziň durnukly resume/keşimiziň astynda."
+      }
+    },
+    {
+      "id": "training-advisor",
+      "category": "training",
+      "status": "planned",
+      "since": "0.3.0",
+      "name": {
+        "en": "Training Advisor",
+        "ru": "Советник по обучению",
+        "tk": "Türgenleşik maslahatçysy"
+      },
+      "description": {
+        "en": "Shows what you can train on this PC (LoRA/QLoRA) and orchestrates Axolotl/PEFT/TRL as the execution layer — a planner, not a new trainer.",
+        "ru": "Показывает, что можно обучить на этом ПК (LoRA/QLoRA), и оркеструет Axolotl/PEFT/TRL как исполнительный слой — планировщик, а не новый тренер.",
+        "tk": "Bu kompýuterde nämä türgenleşip boljakdygyny (LoRA/QLoRA) görkezýär we Axolotl/PEFT/TRL-i ýerine ýetiriş gatlagy hökmünde dolandyrýar — täze türgenleşdiriji däl, meýilleşdiriji."
+      }
+    }
+  ]
+}

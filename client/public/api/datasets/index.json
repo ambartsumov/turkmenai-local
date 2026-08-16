@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-16T12:09:48.396Z",
+  "source": "registry/datasets.json",
+  "datasets": [
+    {
+      "id": "tatsu-lab-alpaca",
+      "name": "Alpaca",
+      "repo": "tatsu-lab/alpaca",
+      "revision": "main",
+      "category": "instruction",
+      "license": "CC-BY-NC-4.0",
+      "languages": [
+        "en"
+      ],
+      "download_mib": 45,
+      "unpacked_mib": 90,
+      "num_examples": 52000,
+      "risk": "non_commercial",
+      "description": {
+        "en": "52K instruction-following examples. Research/non-commercial license.",
+        "ru": "52 тыс. примеров follow-инструкций. Лицензия для исследований/некоммерческая.",
+        "tk": "52 müň görkezmä eýermek mysaly. Gözleg/täjirçilik däl ygtyýarnama."
+      }
+    },
+    {
+      "id": "databricks-dolly-15k",
+      "name": "Databricks Dolly 15k",
+      "repo": "databricks/databricks-dolly-15k",
+      "revision": "main",
+      "category": "instruction",
+      "license": "CC-BY-SA-3.0",
+      "languages": [
+        "en"
+      ],
+      "download_mib": 13,
+      "unpacked_mib": 25,
+      "num_examples": 15011,
+      "risk": "attribution_share_alike",
+      "description": {
+        "en": "15K human-written instruction records usable for commercial fine-tuning with attribution.",
+        "ru": "15 тыс. написанных людьми инструкций, пригодны для коммерческого дообучения с указанием авторства.",
+        "tk": "Adam ýazgan 15 müň görkezme; awtorlyk görkezip täjirçilik fine-tuning üçin ulanyp bolýar."
+      }
+    },
+    {
+      "id": "hf-no-robots",
+      "name": "No Robots",
+      "repo": "HuggingFaceH4/no_robots",
+      "revision": "main",
+      "category": "chat",
+      "license": "CC-BY-NC-4.0",
+      "languages": [
+        "en"
+      ],
+      "download_mib": 8,
+      "unpacked_mib": 16,
+      "num_examples": 10000,
+      "risk": "non_commercial",
+      "description": {
+        "en": "10K high-quality single- and multi-turn chat demonstrations.",
+        "ru": "10 тыс. качественных одно- и многоходовых диалогов.",
+        "tk": "10 müň ýokary hilli bir we köp ädimli chat mysaly."
+      }
+    },
+    {
+      "id": "codealpaca-20k",
+      "name": "CodeAlpaca 20k",
+      "repo": "sahil2801/CodeAlpaca-20k",
+      "revision": "main",
+      "category": "code",
+      "license": "CC-BY-4.0",
+      "languages": [
+        "en",
+        "code"
+      ],
+      "download_mib": 12,
+      "unpacked_mib": 24,
+      "num_examples": 20022,
+      "risk": "attribution",
+      "description": {
+        "en": "20K code-generation instruction pairs.",
+        "ru": "20 тыс. пар инструкций для генерации кода.",
+        "tk": "Kod döretmek üçin 20 müň görkezme jübüti."
+      }
+    },
+    {
+      "id": "gsm8k",
+      "name": "GSM8K (grade-school math)",
+      "repo": "openai/gsm8k",
+      "revision": "main",
+      "category": "reasoning",
+      "license": "MIT",
+      "languages": [
+        "en"
+      ],
+      "download_mib": 11,
+      "unpacked_mib": 22,
+      "num_examples": 8500,
+      "risk": "permissive",
+      "description": {
+        "en": "8.5K grade-school math word problems for reasoning evaluation and tuning.",
+        "ru": "8,5 тыс. школьных математических задач для оценки и обучения рассуждению.",
+        "tk": "Pikirlenmäni bahalandyrmak we türgenleşdirmek üçin 8,5 müň mekdep matematika meselesi."
+      }
+    },
+    {
+      "id": "opus-100",
+      "name": "OPUS-100 (translation)",
+      "repo": "Helsinki-NLP/opus-100",
+      "revision": "main",
+      "category": "translation",
+      "license": "unspecified",
+      "languages": [
+        "multilingual"
+      ],
+      "download_mib": 1500,
+      "unpacked_mib": 3000,
+      "num_examples": 55000000,
+      "risk": "review_terms",
+      "description": {
+        "en": "Multilingual parallel corpus covering 100 languages. Review per-language terms.",
+        "ru": "Многоязычный параллельный корпус на 100 языков. Проверьте условия по языкам.",
+        "tk": "100 dili öz içine alýan köpdilli parallel korpus. Diller boýunça şertleri gözden geçiriň."
+      }
+    }
+  ]
+}

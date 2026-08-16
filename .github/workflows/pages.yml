@@ -49,3 +49,17 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+      # Post-deploy smoke test: the live site, its version string, the machine
+      # -readable manifest, sitemap and robots must actually resolve. A broken
+      # download link or a 404 fails the deploy instead of reaching users.
+      - name: Verify the live site
+        run: |
+          set -euo pipefail
+          base="https://turkmenai.tech"
+          for pth in "/" "/api/releases/latest.json" "/sitemap.xml" "/robots.txt"; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -L "$base$pth")
+            echo "$pth -> $code"
+            [ "$code" = "200" ] || { echo "FAIL: $base$pth returned $code"; exit 1; }
+          done
+          ver=$(curl -sL "$base/api/releases/latest.json" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).version))')
+          echo "live manifest version: $ver"
