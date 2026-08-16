@@ -1,8 +1,8 @@
 # TurkmenAI Local — product tour video (Remotion, 9:16)
 
-On-brand vertical product tour (1080×1920, ~42s) recreating the real app UI. No
-fabricated benchmark numbers — capabilities only. Three languages ship as
-separate compositions: `Tour` (EN), `TourRU`, `TourTK`.
+On-brand vertical product tour (1080×1920, ~36s) recreating the real app UI in
+fast single-focus beats. No fabricated benchmark numbers — capabilities only.
+Three languages ship as separate compositions: `Tour` (EN), `TourRU`, `TourTK`.
 
 ## Run on Kaggle (fast Internet)
 
@@ -23,14 +23,8 @@ separate compositions: `Tour` (EN), `TourRU`, `TourTK`.
    Before running, open Telegram and **send any message to your bot** once, so
    the script can auto-detect your chat id. (Or set `TELEGRAM_CHAT_ID` too.)
 
-The MP4 lands at `video/out/turkmenai-tour.mp4` and is sent to your Telegram.
-
-### Render the RU / TK versions
-
-```bash
-!cd turkmenai-local/video && npx remotion render TourRU out/turkmenai-tour-ru.mp4 --image-format=jpeg
-!cd turkmenai-local/video && npx remotion render TourTK out/turkmenai-tour-tk.mp4 --image-format=jpeg
-```
+This renders **all three languages** (`out/turkmenai-tour-en.mp4`, `-ru.mp4`,
+`-tk.mp4`) and sends each to your Telegram, captioned with its language.
 
 ## Run locally
 

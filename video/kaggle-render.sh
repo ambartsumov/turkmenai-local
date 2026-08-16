@@ -26,16 +26,20 @@ node -v; npm -v
 echo "== 3/5 install project dependencies =="
 npm install --no-audit --no-fund
 
-echo "== 4/5 render (Tour, 9:16) =="
+echo "== 4/5 render all three languages (9:16) =="
 mkdir -p out
-npx remotion render Tour out/turkmenai-tour.mp4 --image-format=jpeg --concurrency=2
-ls -lh out/turkmenai-tour.mp4
+declare -A COMP=( [en]=Tour [ru]=TourRU [tk]=TourTK )
+for L in en ru tk; do
+  echo "-- rendering ${COMP[$L]} ($L) --"
+  npx remotion render "${COMP[$L]}" "out/turkmenai-tour-$L.mp4" --image-format=jpeg --concurrency=2
+done
+ls -lh out/*.mp4
 
 echo "== 5/5 deliver =="
 if [ -n "${TELEGRAM_BOT_TOKEN:-}" ]; then
   pip install requests >/dev/null 2>&1 || true
-  python send_telegram.py out/turkmenai-tour.mp4
+  for L in en ru tk; do python send_telegram.py "out/turkmenai-tour-$L.mp4" || true; done
 else
-  echo "TELEGRAM_BOT_TOKEN not set — skipping Telegram send. The file is at video/out/turkmenai-tour.mp4"
+  echo "TELEGRAM_BOT_TOKEN not set — skipping Telegram send. Files are in video/out/"
 fi
 echo "Done."

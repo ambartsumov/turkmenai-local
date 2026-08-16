@@ -34,10 +34,15 @@ if not chat_id:
     chat_id = ids[-1]
     print(f"Detected chat_id: {chat_id}")
 
+lang = ""
+for code in ("-en", "-ru", "-tk"):
+    if code in os.path.basename(path):
+        lang = f" [{code[1:].upper()}]"
+caption = f"TurkmenAI Local — product tour (v0.3.0){lang}"
 with open(path, "rb") as f:
     resp = requests.post(
         f"https://api.telegram.org/bot{token}/sendVideo",
-        data={"chat_id": chat_id, "caption": "TurkmenAI Local — product tour (v0.3.0)", "supports_streaming": True},
+        data={"chat_id": chat_id, "caption": caption, "supports_streaming": True},
         files={"video": (os.path.basename(path), f, "video/mp4")},
         timeout=600,
     )
