@@ -42,8 +42,8 @@ jobs:
             os: windows-latest
           - id: windows-arm64
             os: windows-11-arm
-          - id: macos-x64
-            os: macos-13
+          # macos-x64 (macos-13 Intel) omitted: scarce hosted runners leave it
+          # queued for hours. Apple Silicon covers the macOS cargo-check.
           - id: macos-arm64
             os: macos-14
     runs-on: ${{ matrix.os }}

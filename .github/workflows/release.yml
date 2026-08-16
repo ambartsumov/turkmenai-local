@@ -27,9 +27,11 @@ jobs:
           - id: windows-arm64
             label: Windows-arm64
             os: windows-11-arm
-          - id: macos-x64
-            label: macOS-x64
-            os: macos-13
+          # macos-x64 (Intel, macos-13) is intentionally omitted: those hosted
+          # runners are scarce and repeatedly leave the job queued for hours,
+          # which blocks `publish` (needs: bundle) from releasing every other
+          # platform. The site shows Intel macOS honestly as "building" until a
+          # healthy runner path exists. Apple Silicon (macos-14) is built below.
           - id: macos-arm64
             label: macOS-arm64
             os: macos-14
