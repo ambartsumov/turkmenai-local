@@ -1,5 +1,6 @@
 /** Design note — «Горный сигнал»: truthful local-only operational console; native runtime states are explicit and never emulated in the browser. */
-import { ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, CircleDotDashed, Copy, Cpu, Database, Download, Languages, LayoutGrid, LockKeyhole, RadioTower, RefreshCw, ServerCog, Square, TerminalSquare } from "lucide-react";
+import { ArrowLeft, Bug, CheckCircle2, ChevronLeft, ChevronRight, CircleDotDashed, ClipboardCopy, Copy, Cpu, Database, Download, ExternalLink, Languages, LayoutGrid, LockKeyhole, RadioTower, RefreshCw, ServerCog, Square, TerminalSquare } from "lucide-react";
+import { product } from "@/generated/product";
 import { Link } from "wouter";
 import { useEffect, useState, type ReactNode } from "react";
 import { copy, type Language } from "@/i18n";
@@ -149,6 +150,43 @@ function ApiPanel({ language }: { language: Language }) {
   </section>;
 }
 
+// REPORT BUG — collects real on-device diagnostics (version, OS, CPU/RAM/GPU,
+// runtime + transport state) and opens a prefilled GitHub issue. Nothing is sent
+// anywhere until the user clicks; the same block can be copied to the clipboard.
+function ReportBug({ language, runtime }: { language: Language; runtime: RuntimeStatus | null }) {
+  const [status, setStatus] = useState<Awaited<ReturnType<typeof getDesktopStatus>>>(null);
+  const [hw, setHw] = useState<Hardware | null>(null);
+  const [xet, setXet] = useState<TransferStatus | null>(null);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => { getDesktopStatus().then(setStatus); getHardware().then(setHw); getTransferStatus().then((s) => s && setXet(s)); }, []);
+  const inApp = Boolean(status);
+  const lines = [
+    `Product: ${product.product} v${status?.core_version ?? product.version} (${product.channel})`,
+    `Platform: ${status?.platform ?? (typeof navigator !== "undefined" ? navigator.platform : "unknown")}`,
+    `OS: ${hw?.os ?? "—"}`,
+    `CPU: ${hw?.cpu ?? "—"}`,
+    `RAM: ${hw ? (hw.ram_mib / 1024).toFixed(1) + " GB" : "—"}  ·  Free disk: ${hw ? (hw.free_disk_mib / 1024).toFixed(1) + " GB" : "—"}`,
+    `GPU: ${hw?.accelerators?.length ? hw.accelerators.join(", ") : "none"}${hw?.vram_mib ? ` (${(hw.vram_mib / 1024).toFixed(1)} GB VRAM)` : ""}`,
+    `Runtime: engine ${runtime?.engine_state ?? "?"}${runtime?.engine ? ` (${runtime.engine.backend} ${runtime.engine.version})` : ""} · health ${runtime?.health ?? "—"}`,
+    `Transport: builtin ${xet?.builtin_ready ? "ready" : "—"} · xet ${xet?.xet.state ?? "—"}${xet?.xet.hf_version ? ` (${xet.xet.hf_version})` : ""}`,
+    `UA: ${typeof navigator !== "undefined" ? navigator.userAgent : ""}`,
+  ];
+  const diagnostics = lines.join("\n");
+  const bugTitle = `[bug] v${status?.core_version ?? product.version} — `;
+  const bugBody = `**What happened**\n\n\n**Steps to reproduce**\n1. \n2. \n\n**Expected**\n\n\n---\n**Diagnostics** (auto-filled)\n\`\`\`\n${diagnostics}\n\`\`\`\n`;
+  const issueUrl = `${product.repository}/issues/new?labels=bug&title=${encodeURIComponent(bugTitle)}&body=${encodeURIComponent(bugBody)}`;
+  const copyDiag = async () => { try { await navigator.clipboard?.writeText(diagnostics); setCopied(true); window.setTimeout(() => setCopied(false), 2000); } catch { /* ignore */ } };
+  return <section className="lab-panel">
+    <div className="lab-head"><span>{L(language, "DIAGNOSTICS & BUG REPORT", "ДИАГНОСТИКА И ОТЧЁТ ОБ ОШИБКЕ", "DIAGNOSTIKA WE ÝALŇYŞLYK HABARY")}</span></div>
+    {!inApp && <p className="lab-hint">{L(language, "Open in the desktop app for full hardware diagnostics.", "Откройте в десктоп-приложении для полной диагностики железа.", "Enjam diagnostikasy üçin desktop programmasynda açyň.")}</p>}
+    <pre className="lab-detail" style={{ whiteSpace: "pre-wrap", fontFamily: "monospace", fontSize: ".74rem", lineHeight: 1.5 }}>{diagnostics}</pre>
+    <div className="runtime-actions">
+      <a className="wizard-next" href={issueUrl} target="_blank" rel="noreferrer"><Bug size={15}/>{L(language, "Report a bug", "Сообщить об ошибке", "Ýalňyşlyk barada habar bermek")}<ExternalLink size={13}/></a>
+      <button type="button" className="runtime-refresh" onClick={copyDiag}><ClipboardCopy size={13}/>{copied ? L(language, "Copied", "Скопировано", "Göçürildi") : L(language, "Copy diagnostics", "Копировать диагностику", "Diagnostikany göçürmek")}</button>
+    </div>
+  </section>;
+}
+
 function LabPanel({ language, runtime }: { language: Language; runtime: RuntimeStatus | null }) {
   const [transfer, setTransfer] = useState<TransferStatus | null>(null);
   const [provisioning, setProvisioning] = useState(false);
@@ -204,7 +242,7 @@ export default function Console() {
     {section === "datasets" && <DatasetsPanel language={language}/>}
     {section === "api" && <ApiPanel language={language}/>}
     {(section === "overview" || section === "runtime") && <>
-    <div className="console-intro"><p className="eyebrow"><span className="signal-dot"/>127.0.0.1 ONLY</p><h1>{t.consoleTitle}</h1><p>{t.consoleLead}</p></div><div className="console-status"><div className="status-orb"><CircleDotDashed size={32}/></div><div><p>{title}</p><span>{detail}</span></div><code>{connected ? "native://core" : "tmai server"}</code></div><div className="console-cards"><article><div className="console-card-label">{t.hardwareFound}</div><b>{connected ? t.localProfile : t.notConnected}</b><span>{hardwareText}</span></article><article><div className="console-card-label">{t.privacy}</div><div className="privacy-lines"><span><LockKeyhole size={14}/>{t.telemetryOff}</span><span><LockKeyhole size={14}/>{t.cloudOff}</span><span><LockKeyhole size={14}/>{t.lanOff}</span></div></article><article><div className="console-card-label">RUNTIME</div><b>{runtimeState.title}</b><span>{runtimeState.detail}</span></article></div>{runtime && <section className="runtime-control"><div className="runtime-control-head"><div><span>{t.runtimeConfigure}</span><strong>{runtimeState.title}</strong></div><button type="button" className="runtime-refresh" onClick={syncRuntime} disabled={runtimeChecking}><RefreshCw size={14} className={runtimeChecking ? "spin" : ""}/>{runtimeChecking ? t.runtimeChecking : t.runtimeRefresh}</button></div>{runtime.engine_state !== "ready" ? <div className="engine-banner"><div><strong>{t.engineNotInstalled}</strong><p>{t.engineHintAuto}</p></div><button type="button" className="wizard-next" onClick={handleEngineInstall} disabled={engineInstalling}><Download size={15}/>{engineInstalling ? t.engineInstalling : t.engineInstall}</button></div> : <p className="engine-version">{t.engineVersion}: {runtime.engine?.backend} {runtime.engine?.version} · {t.engineReady}</p>}<div className="runtime-inputs"><label>{t.runtimeExecutable}<input value={runtimeConfig.executable_path || ""} onChange={(event) => updateRuntimeConfig("executable_path", event.target.value || null)} placeholder="/usr/local/bin/llama-server"/></label><label>{t.runtimeModel}<input value={runtimeConfig.model_path || ""} onChange={(event) => updateRuntimeConfig("model_path", event.target.value || null)} placeholder="/path/to/model.gguf"/></label><label>{t.runtimePort}<input type="number" min="1" max="65535" value={runtimeConfig.port} onChange={(event) => updateRuntimeConfig("port", Number(event.target.value) || 8080)}/></label></div><p>{t.runtimeHint}</p>{runtimeError && <output className="runtime-error">{runtimeError}</output>}<div className="runtime-actions"><button type="button" className="wizard-next" onClick={handleStart} disabled={runtimeChecking}><ServerCog size={16}/>{t.runtimeStart}</button>{runtime.process && <button type="button" className="runtime-stop" onClick={handleStop} disabled={runtimeChecking}><Square size={14}/>{t.runtimeStop}</button>}</div></section>}<LabPanel language={language} runtime={runtime}/><div className="console-command"><div><span>{t.nextStep}</span><strong>{t.nextStepText}</strong></div><code>tmai server 8742</code></div>
+    <div className="console-intro"><p className="eyebrow"><span className="signal-dot"/>127.0.0.1 ONLY</p><h1>{t.consoleTitle}</h1><p>{t.consoleLead}</p></div><div className="console-status"><div className="status-orb"><CircleDotDashed size={32}/></div><div><p>{title}</p><span>{detail}</span></div><code>{connected ? "native://core" : "tmai server"}</code></div><div className="console-cards"><article><div className="console-card-label">{t.hardwareFound}</div><b>{connected ? t.localProfile : t.notConnected}</b><span>{hardwareText}</span></article><article><div className="console-card-label">{t.privacy}</div><div className="privacy-lines"><span><LockKeyhole size={14}/>{t.telemetryOff}</span><span><LockKeyhole size={14}/>{t.cloudOff}</span><span><LockKeyhole size={14}/>{t.lanOff}</span></div></article><article><div className="console-card-label">RUNTIME</div><b>{runtimeState.title}</b><span>{runtimeState.detail}</span></article></div>{runtime && <section className="runtime-control"><div className="runtime-control-head"><div><span>{t.runtimeConfigure}</span><strong>{runtimeState.title}</strong></div><button type="button" className="runtime-refresh" onClick={syncRuntime} disabled={runtimeChecking}><RefreshCw size={14} className={runtimeChecking ? "spin" : ""}/>{runtimeChecking ? t.runtimeChecking : t.runtimeRefresh}</button></div>{runtime.engine_state !== "ready" ? <div className="engine-banner"><div><strong>{t.engineNotInstalled}</strong><p>{t.engineHintAuto}</p></div><button type="button" className="wizard-next" onClick={handleEngineInstall} disabled={engineInstalling}><Download size={15}/>{engineInstalling ? t.engineInstalling : t.engineInstall}</button></div> : <p className="engine-version">{t.engineVersion}: {runtime.engine?.backend} {runtime.engine?.version} · {t.engineReady}</p>}<div className="runtime-inputs"><label>{t.runtimeExecutable}<input value={runtimeConfig.executable_path || ""} onChange={(event) => updateRuntimeConfig("executable_path", event.target.value || null)} placeholder="/usr/local/bin/llama-server"/></label><label>{t.runtimeModel}<input value={runtimeConfig.model_path || ""} onChange={(event) => updateRuntimeConfig("model_path", event.target.value || null)} placeholder="/path/to/model.gguf"/></label><label>{t.runtimePort}<input type="number" min="1" max="65535" value={runtimeConfig.port} onChange={(event) => updateRuntimeConfig("port", Number(event.target.value) || 8080)}/></label></div><p>{t.runtimeHint}</p>{runtimeError && <output className="runtime-error">{runtimeError}</output>}<div className="runtime-actions"><button type="button" className="wizard-next" onClick={handleStart} disabled={runtimeChecking}><ServerCog size={16}/>{t.runtimeStart}</button>{runtime.process && <button type="button" className="runtime-stop" onClick={handleStop} disabled={runtimeChecking}><Square size={14}/>{t.runtimeStop}</button>}</div></section>}<LabPanel language={language} runtime={runtime}/><ReportBug language={language} runtime={runtime}/><div className="console-command"><div><span>{t.nextStep}</span><strong>{t.nextStepText}</strong></div><code>tmai server 8742</code></div>
     </>}
   </section></div></main>;
 }

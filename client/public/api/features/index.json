@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-16T20:21:16.031Z",
+  "generated_at": "2026-08-16T20:48:16.250Z",
   "features": [
     {
       "id": "hardware-detection",
@@ -165,7 +165,7 @@
     {
       "id": "training-advisor",
       "category": "training",
-      "status": "planned",
+      "status": "beta",
       "since": "0.3.0",
       "name": {
         "en": "Training Advisor",
@@ -173,9 +173,9 @@
         "tk": "Türgenleşik maslahatçysy"
       },
       "description": {
-        "en": "Shows what you can train on this PC (LoRA/QLoRA) and orchestrates Axolotl/PEFT/TRL as the execution layer — a planner, not a new trainer.",
-        "ru": "Показывает, что можно обучить на этом ПК (LoRA/QLoRA), и оркеструет Axolotl/PEFT/TRL как исполнительный слой — планировщик, а не новый тренер.",
-        "tk": "Bu kompýuterde nämä türgenleşip boljakdygyny (LoRA/QLoRA) görkezýär we Axolotl/PEFT/TRL-i ýerine ýetiriş gatlagy hökmünde dolandyrýar — täze türgenleşdiriji däl, meýilleşdiriji."
+        "en": "Estimates which catalog models you can fine-tune on this PC (LoRA/QLoRA) from your RAM/VRAM and points to Axolotl for the recipes — a planner, not a new trainer.",
+        "ru": "Оценивает, какие модели из каталога реально дообучить на этом ПК (LoRA/QLoRA) по вашей RAM/VRAM, и ведёт к рецептам Axolotl — планировщик, а не новый тренер.",
+        "tk": "RAM/VRAM boýunça haýsy katalog modellerini bu kompýuterde (LoRA/QLoRA) türgenleşdirip boljakdygyny çaklaýar we reseptler üçin Axolotl-a ugrukdyrýar — täze türgenleşdiriji däl, meýilleşdiriji."
       }
     }
   ]

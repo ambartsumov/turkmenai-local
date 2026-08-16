@@ -6,6 +6,9 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Console from "./pages/Console";
+import Advisor from "./pages/Advisor";
+import { ModelsIndex, ModelDetail, DatasetsIndex, DatasetDetail } from "./pages/Catalog";
+import { ReleasesIndex, ReleaseDetail } from "./pages/Releases";
 
 
 function Router() {
@@ -13,6 +16,13 @@ function Router() {
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/console"} component={Console} />
+      <Route path={"/releases"} component={ReleasesIndex} />
+      <Route path={"/releases/:tag"} component={ReleaseDetail} />
+      <Route path={"/models"} component={ModelsIndex} />
+      <Route path={"/models/:slug"} component={ModelDetail} />
+      <Route path={"/datasets"} component={DatasetsIndex} />
+      <Route path={"/datasets/:slug"} component={DatasetDetail} />
+      <Route path={"/advisor"} component={Advisor} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

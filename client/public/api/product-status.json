@@ -4,8 +4,8 @@
   "version": "0.3.0",
   "channel": "experimental",
   "release_tag": "v0.3.0",
-  "generated_at": "2026-08-16T20:21:16.031Z",
-  "repository_commit": "ddc753235529e8f9cc20f69f4978dd913157cdb2",
+  "generated_at": "2026-08-16T20:48:16.250Z",
+  "repository_commit": "fe8266830a132065d95ed56446a8ea1e84b10035",
   "platforms_available": [
     "linux-x64",
     "linux-arm64",
@@ -16,10 +16,7 @@
   "feature_counts": {
     "stable": 4,
     "experimental": 4,
-    "beta": 2,
-    "planned": 1
+    "beta": 3
   },
-  "planned_not_yet_available": [
-    "training-advisor"
-  ]
+  "planned_not_yet_available": []
 }
