@@ -80,3 +80,39 @@ export function getCatalogAll(refresh = false): Promise<Recommendation[] | null>
 export function getDatasetRecommendations(refresh = false): Promise<DatasetsResult | null> {
   return invokeRuntime<DatasetsResult>("dataset_recommendations", { refresh });
 }
+
+// ---- Transfer engine (Xet), one-click install & on-device benchmarks -------
+
+export type XetState = "ready" | "not_installed";
+export type LocalizedText = { en: string; ru: string; tk: string };
+export type InstructionStep = { command: string | null; text: LocalizedText };
+export type XetStatus = { state: XetState; hf_version: string | null; detail: LocalizedText; instructions: InstructionStep[] };
+export type TransferStatus = { builtin_ready: boolean; active_backend: string; xet: XetStatus };
+
+export type DownloadProgress = { bytes_downloaded: number; total_bytes: number | null; elapsed_ms: number; speed_bps: number; avg_bps: number; retries: number };
+export type DownloadBenchmark = { total_bytes: number; elapsed_ms: number; avg_bps: number; interruptions: number; naive_estimate_ms: number | null; naive_would_complete: boolean; explanation: string };
+export type InstallRequest = { model_id: string; repo: string; revision: string; file: string; download_url: string; sha256: string | null };
+export type InstalledModel = { model_id: string; path: string; bytes: number; backend: string; benchmark: DownloadBenchmark };
+export type InferenceBenchmark = { model: string; prompt_tokens: number | null; generated_tokens: number; total_ms: number; time_to_first_token_ms: number | null; tokens_per_sec: number; ram_used_mib: number | null; ram_total_mib: number; cpu: string };
+
+export function getTransferStatus(): Promise<TransferStatus | null> {
+  return invokeRuntime<TransferStatus>("transfer_status");
+}
+
+/** Best-effort out-of-the-box setup of the accelerated Xet transport. */
+export function provisionTransfer(): Promise<TransferStatus | null> {
+  return invokeRuntime<TransferStatus>("transfer_provision");
+}
+
+/** Install a model the user picked; streams live download progress. */
+export async function installModel(request: InstallRequest, onProgress?: (p: DownloadProgress) => void): Promise<InstalledModel | null> {
+  if (!inTauri()) return null;
+  const { invoke, Channel } = await import("@tauri-apps/api/core");
+  const channel = new Channel<DownloadProgress>();
+  if (onProgress) channel.onmessage = onProgress;
+  return invoke<InstalledModel>("model_install", { request, on_progress: channel });
+}
+
+export function benchmarkInference(port: number, model: string, prompt?: string, maxTokens?: number): Promise<InferenceBenchmark | null> {
+  return invokeRuntime<InferenceBenchmark>("benchmark_inference", { port, model, prompt: prompt ?? null, max_tokens: maxTokens ?? null });
+}

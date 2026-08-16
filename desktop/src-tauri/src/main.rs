@@ -2,14 +2,19 @@
 
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeSet, path::PathBuf, sync::Mutex};
+use tauri::ipc::Channel;
 use tauri::Manager;
 use turkmenai_core::{
+    bench::{inference_benchmark, InferenceBenchmark},
     catalog::{Catalog, CatalogSnapshot, Recommendation},
     datasets::{DatasetCatalog, DatasetEvaluation, DatasetSnapshot},
+    download::Progress,
+    install::{self, install_model, InstallRequest, InstalledModel},
     llama::{LlamaHealth, LlamaServerEndpoint},
     provision::{self, EngineState, ManagedEngine},
     runtime::{discover_llama_server, RuntimeRecord, RuntimeSupervisor},
     state::{AppStateStore, RuntimeConfig},
+    transfer::{self, TransferStatus},
     BackendCapabilityRegistry, Capability, ExecutionPlanner, HardwareProfile, ModelFormat,
     ModelResolver, Objective, Task,
 };
@@ -254,6 +259,48 @@ fn engine_install() -> Result<EngineStatus, String> {
     })
 }
 
+/// Report the managed transfer engine: the built-in downloader is always ready;
+/// Xet (hf CLI) is reported as ready or not_installed with setup instructions.
+#[tauri::command]
+fn transfer_status() -> TransferStatus {
+    transfer::detect()
+}
+
+/// Best-effort, out-of-the-box provisioning of the accelerated Xet transport.
+/// Never fails: on any problem the built-in downloader stays active and the
+/// returned status still carries manual instructions.
+#[tauri::command]
+fn transfer_provision() -> TransferStatus {
+    transfer::provision()
+}
+
+/// One-click model install: pick the fastest available transport, download
+/// resiliently with live progress, verify the hash, return the local path and an
+/// honest download benchmark. Progress ticks stream over `on_progress`.
+#[tauri::command]
+fn model_install(request: InstallRequest, on_progress: Channel<Progress>) -> Result<InstalledModel, String> {
+    let dir = install::default_models_dir();
+    install_model(&request, &dir, &mut |progress| {
+        let _ = on_progress.send(progress);
+    })
+    .map_err(|error| error.to_string())
+}
+
+/// Benchmark a short generation against the running loopback llama-server:
+/// tokens/sec, time-to-first-token and the RAM the run used.
+#[tauri::command]
+fn benchmark_inference(
+    port: u16,
+    model: String,
+    prompt: Option<String>,
+    max_tokens: Option<u32>,
+) -> Result<InferenceBenchmark, String> {
+    let endpoint = LlamaServerEndpoint::new(port).map_err(|error| error.to_string())?;
+    let prompt = prompt.unwrap_or_else(|| "Write one short sentence about Turkmenistan.".into());
+    inference_benchmark(&endpoint, &model, &prompt, max_tokens.unwrap_or(64))
+        .map_err(|error| error.to_string())
+}
+
 #[tauri::command]
 fn runtime_discover(manager: tauri::State<'_, RuntimeManager>) -> Result<RuntimeStatus, String> {
     let config = manager.saved_config()?;
@@ -359,6 +406,10 @@ fn main() {
             dataset_recommendations,
             engine_status,
             engine_install,
+            transfer_status,
+            transfer_provision,
+            model_install,
+            benchmark_inference,
             runtime_discover,
             runtime_start,
             runtime_health,
