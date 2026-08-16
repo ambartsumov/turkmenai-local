@@ -29,17 +29,33 @@ npm install --no-audit --no-fund
 echo "== 4/5 render all three languages (9:16) =="
 mkdir -p out
 declare -A COMP=( [en]=Tour [ru]=TourRU [tk]=TourTK )
+DONE=()
 for L in en ru tk; do
-  echo "-- rendering ${COMP[$L]} ($L) --"
-  npx remotion render "${COMP[$L]}" "out/turkmenai-tour-$L.mp4" --image-format=jpeg --concurrency=2
+  OUT="out/turkmenai-tour-$L.mp4"
+  echo "-- rendering ${COMP[$L]} ($L) -> $OUT --"
+  rm -f "$OUT"
+  npx remotion render "${COMP[$L]}" "$OUT" --image-format=jpeg --concurrency=2
+  # A render can exit 0 yet leave a truncated/empty file — verify each one.
+  if [ ! -s "$OUT" ]; then
+    echo "ERROR: $OUT was not produced (empty or missing)." >&2
+    exit 1
+  fi
+  DONE+=("$OUT")
 done
+echo "Rendered ${#DONE[@]}/3 languages:"
 ls -lh out/*.mp4
+
+# Guard: all three must exist before we call it a success.
+if [ "${#DONE[@]}" -ne 3 ]; then
+  echo "ERROR: expected 3 videos, got ${#DONE[@]}." >&2
+  exit 1
+fi
 
 echo "== 5/5 deliver =="
 if [ -n "${TELEGRAM_BOT_TOKEN:-}" ]; then
   pip install requests >/dev/null 2>&1 || true
-  for L in en ru tk; do python send_telegram.py "out/turkmenai-tour-$L.mp4" || true; done
+  for OUT in "${DONE[@]}"; do python send_telegram.py "$OUT" || true; done
 else
   echo "TELEGRAM_BOT_TOKEN not set — skipping Telegram send. Files are in video/out/"
 fi
-echo "Done."
+echo "Done — all 3 language videos rendered."

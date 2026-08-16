@@ -11,7 +11,7 @@ Three languages ship as separate compositions: `Tour` (EN), `TourRU`, `TourTK`.
 2. In a cell, get this folder (clone the repo branch):
 
    ```bash
-   !git clone --branch feat/hf-catalog-datasets --depth 1 https://github.com/ambartsumov/turkmenai-local.git
+   !git clone --branch main --depth 1 https://github.com/ambartsumov/turkmenai-local.git
    ```
 
 3. Render and deliver. Paste your bot token where shown (keep it private):
