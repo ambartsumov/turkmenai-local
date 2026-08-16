@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "product": "TurkmenAI Local",
+  "identifier": "local.turkmenai.desktop",
+  "version": "0.2.0",
+  "channel": "experimental",
+  "repository": "https://github.com/ambartsumov/turkmenai-local",
+  "website": "https://ambartsumov.github.io/turkmenai-local",
+  "tagline": {
+    "en": "Local AI. Built for Turkmenistan.",
+    "ru": "Локальный ИИ. Создан для Туркменистана.",
+    "tk": "Ýerli AI. Türkmenistan üçin döredildi."
+  },
+  "summary": {
+    "en": "Offline-first desktop app that knows your PC, shows what you can run and download from Hugging Face, sets up the llama.cpp engine itself, and keeps a private local API — no cloud, no telemetry.",
+    "ru": "Офлайн-приложение, которое знает ваш ПК, показывает, что можно запустить и скачать с Hugging Face, само настраивает движок llama.cpp и держит приватный локальный API — без облака и телеметрии.",
+    "tk": "Kompýuteriňizi bilýän, Hugging Face-den nämä işledip we ýükläp boljakdygyny görkezýän, llama.cpp hereketlendirijisini özi gurýan we hususy ýerli API saklaýan oflaýn programma — bulutsyz, telemetriýasyz."
+  },
+  "minimum_requirements": {
+    "ram_mib": 8192,
+    "free_disk_mib": 6144,
+    "notes_en": "8 GB RAM and ~6 GB free disk cover a 3-4B Q4 chat model. More RAM/VRAM unlocks larger models.",
+    "notes_ru": "8 ГБ ОЗУ и ~6 ГБ на диске хватает для чат-модели 3-4B Q4. Больше RAM/VRAM — крупнее модели.",
+    "notes_tk": "8 GB RAM we ~6 GB boş disk 3-4B Q4 çat modeli üçin ýeterlik. Köpräk RAM/VRAM — has uly modeller."
+  },
+  "security_contract": {
+    "offline_capable": true,
+    "telemetry": false,
+    "loopback_only_api": true,
+    "weights_only": true,
+    "hash_verified": true
+  }
+}

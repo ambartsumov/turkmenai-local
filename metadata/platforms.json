@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "comment": "Canonical build matrix. Release-time truth (which artifact actually exists) is generated into client/src/releases.ts from real GitHub Release assets; this file describes intent, minimum OS and artifact types.",
+  "platforms": [
+    { "id": "linux-x64", "os": "Linux", "arch": "x64", "minimum_os": "glibc 2.35 (Ubuntu 22.04+)", "artifacts": ["AppImage", "deb", "rpm"], "runner": "ubuntu-24.04" },
+    { "id": "linux-arm64", "os": "Linux", "arch": "ARM64", "minimum_os": "glibc 2.35 (Ubuntu 22.04+)", "artifacts": ["AppImage", "deb", "rpm"], "runner": "ubuntu-24.04-arm" },
+    { "id": "windows-x64", "os": "Windows 10 / 11", "arch": "x64", "minimum_os": "Windows 10 1809+", "artifacts": ["exe"], "runner": "windows-latest" },
+    { "id": "windows-arm64", "os": "Windows 10 / 11", "arch": "ARM64", "minimum_os": "Windows 11", "artifacts": ["exe"], "runner": "windows-11-arm" },
+    { "id": "macos-arm64", "os": "macOS", "arch": "Apple Silicon", "minimum_os": "macOS 14 (Sonoma)", "artifacts": ["dmg"], "runner": "macos-14" },
+    { "id": "macos-x64", "os": "macOS", "arch": "Intel x64", "minimum_os": "macOS 13 (Ventura)", "artifacts": ["dmg"], "runner": "macos-13" }
+  ]
+}

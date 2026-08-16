@@ -1,0 +1,54 @@
+name: Sync website to release
+
+# One product, one source of truth. When a GitHub Release is published, the
+# website download data is regenerated from the REAL uploaded assets and, if it
+# changed, committed to main — which triggers the Pages deploy. No human ever
+# hand-edits download links or version strings on the site.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to sync from (e.g. v0.3.0)
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-site
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Resolve tag
+        id: tag
+        run: echo "value=${{ github.event.release.tag_name || inputs.tag }}" >> "$GITHUB_OUTPUT"
+      - name: Regenerate site release truth from real assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/generate-site-releases.mjs "${{ steps.tag.outputs.value }}"
+      - name: Keep generated product data fresh
+        run: node scripts/sync-metadata.mjs
+      - name: Commit if the site data changed
+        run: |
+          set -euo pipefail
+          git config user.name  "turkmenai-bot"
+          git config user.email "bot@users.noreply.github.com"
+          if git diff --quiet -- client/src/releases.ts client/src/generated/product.ts; then
+            echo "Website already reflects ${{ steps.tag.outputs.value }} — nothing to commit."
+            exit 0
+          fi
+          git add client/src/releases.ts client/src/generated/product.ts
+          git commit -m "chore(site): sync download matrix + product data to ${{ steps.tag.outputs.value }}"
+          git push origin main
