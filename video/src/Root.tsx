@@ -11,7 +11,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="Tour"
         component={Tour}
-        durationInFrames={42 * FPS}
+        durationInFrames={1080}
         fps={FPS}
         width={W}
         height={H}
@@ -20,7 +20,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="TourRU"
         component={Tour}
-        durationInFrames={42 * FPS}
+        durationInFrames={1080}
         fps={FPS}
         width={W}
         height={H}
@@ -29,7 +29,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="TourTK"
         component={Tour}
-        durationInFrames={42 * FPS}
+        durationInFrames={1080}
         fps={FPS}
         width={W}
         height={H}

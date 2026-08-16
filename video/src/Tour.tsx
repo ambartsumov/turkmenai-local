@@ -3,19 +3,18 @@ import { AbsoluteFill, Sequence, interpolate, spring, useCurrentFrame, useVideoC
 import { T, FPS } from "./theme";
 import { tri, type Lang } from "./copy";
 
-// ---------- shared atoms ----------------------------------------------------
+// Snappy spring for energetic pacing.
+const pop = (frame: number, fps: number, delay = 0) => spring({ frame: frame - delay, fps, config: { damping: 16, stiffness: 140, mass: 0.6 } });
 
 const Bg: React.FC = () => {
   const f = useCurrentFrame();
-  const drift = interpolate(f, [0, 42 * FPS], [0, -60]);
+  const drift = interpolate(f, [0, 40 * FPS], [0, -50]);
   return (
-    <AbsoluteFill style={{ background: `radial-gradient(120% 80% at 78% 12%, ${T.signalDim}, transparent 55%), linear-gradient(160deg, ${T.ink}, ${T.deep})` }}>
-      <AbsoluteFill style={{ backgroundImage: `linear-gradient(rgba(49,216,199,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(49,216,199,.05) 1px, transparent 1px)`, backgroundSize: "60px 60px", transform: `translateY(${drift}px)`, maskImage: "linear-gradient(180deg, transparent, black 25%, black 80%, transparent)" }} />
+    <AbsoluteFill style={{ background: `radial-gradient(120% 70% at 80% 10%, ${T.signalDim}, transparent 55%), linear-gradient(160deg, ${T.ink}, ${T.deep})` }}>
+      <AbsoluteFill style={{ backgroundImage: `linear-gradient(rgba(49,216,199,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(49,216,199,.05) 1px, transparent 1px)`, backgroundSize: "64px 64px", transform: `translateY(${drift}px)`, maskImage: "linear-gradient(180deg, transparent, black 22%, black 82%, transparent)" }} />
     </AbsoluteFill>
   );
 };
-
-const Dot: React.FC = () => <div style={{ width: 14, height: 14, borderRadius: 99, background: T.signal, boxShadow: `0 0 22px ${T.signal}` }} />;
 
 const Mark: React.FC<{ size?: number }> = ({ size = 54 }) => (
   <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
@@ -24,210 +23,245 @@ const Mark: React.FC<{ size?: number }> = ({ size = 54 }) => (
   </svg>
 );
 
-// Bottom caption block used in every scene.
-const Caption: React.FC<{ index: string; title: string; body: string; startAt?: number }> = ({ index, title, body, startAt = 0 }) => {
-  const f = useCurrentFrame() - startAt;
+// A beat = one headline (top) + one focused visual (center) + one short line.
+// Single eye path, no competing paragraphs.
+const Beat: React.FC<{ index: string; head: string; line: string; children: React.ReactNode }> = ({ index, head, line, children }) => {
+  const f = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const rise = spring({ frame: f, fps, config: { damping: 200 } });
-  const y = interpolate(rise, [0, 1], [40, 0]);
+  const h = pop(f, fps, 2);
+  const under = interpolate(f, [6, 22], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) });
+  const vis = pop(f, fps, 10);
+  const lineOp = interpolate(f, [18, 30], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   return (
-    <div style={{ position: "absolute", left: 70, right: 70, bottom: 210, opacity: rise, transform: `translateY(${y}px)` }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, color: T.signal, font: `700 22px ${T.mono}`, letterSpacing: 3, marginBottom: 22 }}><Dot /> {index}</div>
-      <div style={{ font: `800 76px ${T.sans}`, color: T.fog, letterSpacing: -3, lineHeight: 1.02 }}>{title}</div>
-      <div style={{ marginTop: 22, font: `500 34px ${T.sans}`, color: "#b7c7c8", lineHeight: 1.45, maxWidth: 860 }}>{body}</div>
-    </div>
-  );
-};
-
-// A recreated app window (device frame) that scenes render their UI into.
-const Screen: React.FC<{ children: React.ReactNode; startAt?: number }> = ({ children, startAt = 0 }) => {
-  const f = useCurrentFrame() - startAt;
-  const { fps } = useVideoConfig();
-  const s = spring({ frame: f, fps, config: { damping: 200 } });
-  const scale = interpolate(s, [0, 1], [0.92, 1]);
-  return (
-    <div style={{ position: "absolute", top: 150, left: 70, right: 70, height: 1150, borderRadius: 22, overflow: "hidden", border: `1px solid ${T.line}`, background: "#07131e", boxShadow: `26px 26px 0 rgba(49,216,199,.07)`, opacity: s, transform: `scale(${scale})`, transformOrigin: "top center" }}>
-      <div style={{ height: 74, borderBottom: `1px solid ${T.line}`, display: "flex", alignItems: "center", gap: 12, padding: "0 26px", color: T.fog, font: `800 22px ${T.sans}` }}>
-        <Mark size={30} /> TurkmenAI <span style={{ color: T.signal, fontWeight: 500 }}>Local</span>
-        <div style={{ marginLeft: "auto", display: "flex", gap: 5 }}>{["EN", "RU", "TK"].map((l, i) => <div key={l} style={{ font: `700 16px ${T.mono}`, padding: "7px 9px", background: i === 0 ? T.signal : "transparent", color: i === 0 ? "#042129" : "#9eb0b3" }}>{l}</div>)}</div>
+    <AbsoluteFill style={{ padding: "0 80px" }}>
+      {/* headline */}
+      <div style={{ position: "absolute", top: 210, left: 80, right: 80 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, color: T.signal, font: `700 24px ${T.mono}`, letterSpacing: 3, opacity: h }}>
+          <span style={{ width: 14, height: 14, borderRadius: 99, background: T.signal, boxShadow: `0 0 22px ${T.signal}` }} /> {index} / 09
+        </div>
+        <div style={{ marginTop: 18, font: `800 82px ${T.sans}`, color: T.fog, letterSpacing: -3, lineHeight: 1.0, opacity: h, transform: `translateX(${interpolate(h, [0, 1], [-36, 0])}px)` }}>{head}</div>
+        <div style={{ height: 5, width: `${under * 100}%`, maxWidth: 520, background: T.signal, marginTop: 20, boxShadow: `0 0 16px ${T.signal}` }} />
       </div>
-      <div style={{ padding: 30 }}>{children}</div>
-    </div>
+      {/* focused visual */}
+      <div style={{ position: "absolute", top: 560, left: 80, right: 80, height: 800, display: "flex", alignItems: "center", justifyContent: "center", opacity: vis, transform: `scale(${interpolate(vis, [0, 1], [0.9, 1])})` }}>{children}</div>
+      {/* one-line caption */}
+      <div style={{ position: "absolute", bottom: 250, left: 80, right: 80, textAlign: "center", font: `600 40px ${T.sans}`, color: "#c3d2d3", opacity: lineOp }}>{line}</div>
+    </AbsoluteFill>
   );
 };
 
-const Cursor: React.FC<{ from: [number, number]; to: [number, number]; clickAt: number; startAt?: number }> = ({ from, to, clickAt, startAt = 0 }) => {
-  const f = useCurrentFrame() - startAt;
-  const p = interpolate(f, [0, clickAt - 6], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) });
-  const x = interpolate(p, [0, 1], [from[0], to[0]]);
-  const y = interpolate(p, [0, 1], [from[1], to[1]]);
-  const press = f >= clickAt && f < clickAt + 8 ? 0.82 : 1;
+const card: React.CSSProperties = { border: `1px solid ${T.line}`, background: T.panel2, padding: 26, borderRadius: 10, width: "100%" };
+const chip = (c: string): React.CSSProperties => ({ font: `700 20px ${T.mono}`, color: c, border: `1px solid ${c}`, padding: "8px 12px", borderRadius: 6, letterSpacing: 1 });
+const mono = (s: number, c = "#81969a"): React.CSSProperties => ({ font: `700 ${s}px ${T.mono}`, color: c, letterSpacing: 2 });
+
+// ---- focused visuals -------------------------------------------------------
+
+const VisHardware: React.FC = () => {
+  const f = useCurrentFrame();
+  const items = [["CPU", 0], ["RAM", 6], ["GPU / VRAM", 12], ["DISK", 18]] as const;
   return (
-    <div style={{ position: "absolute", left: x, top: y, transform: `scale(${press})`, transition: "none", zIndex: 30 }}>
-      <svg width="46" height="46" viewBox="0 0 24 24" fill="none"><path d="M5 3l14 8-6 1.5L10 20 5 3z" fill={T.fog} stroke="#04222a" strokeWidth="1.2" /></svg>
-      {f >= clickAt && f < clickAt + 14 && <div style={{ position: "absolute", left: -14, top: -14, width: 60, height: 60, borderRadius: 99, border: `3px solid ${T.signal}`, opacity: interpolate(f, [clickAt, clickAt + 14], [0.9, 0]), transform: `scale(${interpolate(f, [clickAt, clickAt + 14], [0.4, 1.5])})` }} />}
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, width: "100%" }}>
+      {items.map(([k, d]) => {
+        const w = interpolate(f, [14 + d, 34 + d], [0, 100], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+        return (
+          <div key={k} style={{ ...card, minHeight: 170 }}>
+            <div style={mono(19)}>{k}</div>
+            <div style={{ marginTop: 26, height: 12, background: "#12333a", borderRadius: 6, overflow: "hidden" }}><div style={{ height: "100%", width: `${w}%`, background: `linear-gradient(90deg,#00c2b8,${T.signal})` }} /></div>
+            <div style={{ marginTop: 14, font: `500 22px ${T.sans}`, color: "#9baeb2" }}>detected locally</div>
+          </div>
+        );
+      })}
     </div>
   );
 };
 
-// ---------- scenes ----------------------------------------------------------
+const ModelRow: React.FC<{ name: string; cat: string; fit: string; on: boolean }> = ({ name, cat, fit, on }) => (
+  <div style={{ ...card, borderColor: on ? T.signal : T.line, boxShadow: on ? `0 0 0 2px ${T.signal}` : "none" }}>
+    <div style={{ display: "flex", alignItems: "center" }}>
+      <span style={{ ...mono(18), textTransform: "uppercase" }}>{cat}</span>
+      <span style={{ marginLeft: "auto", ...chip(fit === "EXCELLENT" ? T.signal : T.sand), fontSize: 16 }}>{fit}</span>
+    </div>
+    <div style={{ marginTop: 12, font: `700 34px ${T.sans}`, color: T.fog }}>{name}</div>
+  </div>
+);
+const VisModels: React.FC = () => (
+  <div style={{ display: "grid", gap: 16, width: "100%" }}>
+    <ModelRow name="Qwen2.5 3B Instruct" cat="chat" fit="EXCELLENT" on />
+    <ModelRow name="Whisper Small" cat="speech" fit="GOOD" on={false} />
+    <ModelRow name="Gemma 2 2B" cat="chat" fit="EXCELLENT" on={false} />
+  </div>
+);
+
+const VisDatasets: React.FC = () => (
+  <div style={{ display: "grid", gap: 16, width: "100%" }}>
+    {[["Alpaca", "instruction", "CC-BY-NC"], ["Turkmen ASR", "speech", "CC-BY"], ["OpenAssistant", "chat", "Apache-2.0"]].map(([n, c, lic]) => (
+      <div key={n} style={card}>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <span style={{ ...mono(18), textTransform: "uppercase" }}>{c}</span>
+          <span style={{ marginLeft: "auto", ...chip(T.sand), fontSize: 15 }}>{lic}</span>
+        </div>
+        <div style={{ marginTop: 12, font: `700 32px ${T.sans}`, color: T.fog }}>{n}</div>
+      </div>
+    ))}
+  </div>
+);
+
+const InstallCard: React.FC<{ lang: Lang; resume: boolean }> = ({ lang, resume }) => {
+  const f = useCurrentFrame();
+  // resume beat stalls at ~45% then jumps; install beat fills smoothly.
+  const pct = resume
+    ? Math.round(interpolate(f, [10, 40, 58, 90], [0, 45, 45, 100], { extrapolateRight: "clamp", easing: Easing.inOut(Easing.quad) }))
+    : Math.round(interpolate(f, [10, 70], [0, 100], { extrapolateRight: "clamp", easing: Easing.inOut(Easing.quad) }));
+  const reconnecting = resume && f > 40 && f < 60;
+  const done = pct >= 100;
+  return (
+    <div style={{ ...card }}>
+      <div style={{ display: "flex", alignItems: "center" }}>
+        <span style={{ ...mono(18), textTransform: "uppercase" }}>chat</span>
+        <span style={{ marginLeft: "auto", ...chip(T.signal), fontSize: 16 }}>EXCELLENT</span>
+      </div>
+      <div style={{ marginTop: 12, font: `700 34px ${T.sans}`, color: T.fog }}>Qwen2.5 3B Instruct</div>
+      <div style={{ marginTop: 22, height: 14, background: "#12333a", borderRadius: 7, overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${pct}%`, background: reconnecting ? "#e0a94a" : `linear-gradient(90deg,#00c2b8,${T.signal})` }} />
+      </div>
+      <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 16, ...mono(22, "#8fb3b3") }}>
+        <span>{done ? tri("ready", lang) : `${pct}%`}</span>
+        {reconnecting ? <span style={{ color: "#e0a94a" }}>↻ {tri("reconnect", lang)}</span> : <span>{done ? "SHA-256 ✓" : "resumable"}</span>}
+      </div>
+      <div style={{ marginTop: 22, alignSelf: "flex-start", background: done ? "#0c2a30" : T.signal, color: done ? T.signal : "#06232a", font: `800 26px ${T.sans}`, padding: "16px 24px", borderRadius: 6, display: "inline-block" }}>{done ? `✓ ${tri("ready", lang)}` : tri("install", lang)}</div>
+    </div>
+  );
+};
+
+const VisPrivate: React.FC = () => {
+  const f = useCurrentFrame();
+  const rows = [["127.0.0.1 ONLY", T.signal], ["NO TELEMETRY", T.signal], ["NO CLOUD", T.signal]] as const;
+  return (
+    <div style={{ display: "grid", gap: 18, width: "100%" }}>
+      {rows.map(([t, c], i) => {
+        const s = pop(f, FPS, 8 + i * 8);
+        return <div key={t} style={{ ...card, display: "flex", alignItems: "center", gap: 18, opacity: s, transform: `translateX(${interpolate(s, [0, 1], [-30, 0])}px)` }}><span style={{ color: c, font: `800 30px ${T.mono}` }}>✓</span><span style={{ font: `700 34px ${T.mono}`, color: T.fog, letterSpacing: 2 }}>{t}</span></div>;
+      })}
+    </div>
+  );
+};
+
+const VisOffline: React.FC = () => {
+  const f = useCurrentFrame();
+  const cut = f > 20;
+  return (
+    <div style={{ display: "grid", gap: 26, justifyItems: "center", width: "100%" }}>
+      <svg width="180" height="180" viewBox="0 0 24 24" fill="none">
+        <path d="M2 8.5C7 4 17 4 22 8.5" stroke={cut ? "#3a4b52" : T.signal} strokeWidth="1.6" strokeLinecap="round" />
+        <path d="M5 12C8.5 9 15.5 9 19 12" stroke={cut ? "#3a4b52" : T.signal} strokeWidth="1.6" strokeLinecap="round" />
+        <path d="M8 15.5C10 14 14 14 16 15.5" stroke={cut ? "#3a4b52" : T.signal} strokeWidth="1.6" strokeLinecap="round" />
+        <circle cx="12" cy="19" r="1.4" fill={cut ? "#3a4b52" : T.signal} />
+        {cut && <path d="M4 4 L20 20" stroke={T.sand} strokeWidth="1.8" strokeLinecap="round" />}
+      </svg>
+      <div style={{ ...card, textAlign: "center", background: "#0c2a30", borderColor: T.signal }}>
+        <span style={{ font: `700 30px ${T.mono}`, color: T.signal, letterSpacing: 2 }}>● llama.cpp · 127.0.0.1 · running</span>
+      </div>
+    </div>
+  );
+};
+
+const VisBench: React.FC = () => {
+  const f = useCurrentFrame();
+  const metrics = ["Tokens / sec", "First token", "CPU / RAM"];
+  return (
+    <div style={{ display: "grid", gap: 16, width: "100%" }}>
+      {metrics.map((m, i) => {
+        const w = interpolate(f, [10 + i * 8, 40 + i * 8], [0, [82, 58, 70][i]], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+        return <div key={m} style={card}>
+          <div style={{ display: "flex", justifyContent: "space-between", ...mono(19) }}><span>{m}</span><span style={{ color: T.signal }}>measured on device</span></div>
+          <div style={{ marginTop: 16, height: 16, background: "#12333a", borderRadius: 8, overflow: "hidden" }}><div style={{ height: "100%", width: `${w}%`, background: `linear-gradient(90deg,#00c2b8,${T.signal})` }} /></div>
+        </div>;
+      })}
+    </div>
+  );
+};
+
+const VisLang: React.FC = () => {
+  const f = useCurrentFrame();
+  const active = Math.floor(f / 22) % 3; // cycle EN→RU→TK
+  const langs = ["EN", "RU", "TK"];
+  const words = ["Chat", "Чат", "Söhbet"];
+  return (
+    <div style={{ display: "grid", gap: 30, justifyItems: "center", width: "100%" }}>
+      <div style={{ display: "flex", gap: 12 }}>{langs.map((l, i) => <div key={l} style={{ font: `800 30px ${T.mono}`, padding: "14px 20px", borderRadius: 6, background: i === active ? T.signal : "transparent", color: i === active ? "#052228" : "#9eb0b3", border: `1px solid ${i === active ? T.signal : T.line}` }}>{l}</div>)}</div>
+      <div style={{ ...card, textAlign: "center", minWidth: 360 }}><span style={{ font: `800 56px ${T.sans}`, color: T.fog }}>{words[active]}</span></div>
+    </div>
+  );
+};
+
+// ---- intro / cta -----------------------------------------------------------
 
 const Intro: React.FC<{ lang: Lang }> = ({ lang }) => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const s = spring({ frame: f, fps, config: { damping: 200 } });
-  const line = interpolate(f, [10, 45], [0, 1], { extrapolateRight: "clamp" });
+  const s = pop(f, fps);
+  const line = interpolate(f, [8, 30], [0, 1], { extrapolateRight: "clamp" });
   return (
     <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", padding: 80 }}>
-      <div style={{ transform: `scale(${interpolate(s, [0, 1], [0.6, 1])})`, opacity: s }}><Mark size={140} /></div>
-      <div style={{ marginTop: 40, font: `800 92px ${T.sans}`, color: T.fog, letterSpacing: -4, textAlign: "center", lineHeight: 1 }}>TurkmenAI <span style={{ color: T.signal }}>Local</span></div>
-      <div style={{ height: 2, width: interpolate(line, [0, 1], [0, 420]), background: T.signal, margin: "38px 0", boxShadow: `0 0 20px ${T.signal}` }} />
-      <div style={{ font: `500 40px ${T.sans}`, color: "#c3d2d3", textAlign: "center", maxWidth: 820, opacity: interpolate(f, [30, 55], [0, 1], { extrapolateRight: "clamp" }) }}>{tri("tagline", lang)}</div>
-      <div style={{ marginTop: 26, font: `700 22px ${T.mono}`, color: T.signal, letterSpacing: 6, opacity: interpolate(f, [40, 60], [0, 1], { extrapolateRight: "clamp" }) }}>{tri("kicker", lang)}</div>
+      <div style={{ transform: `scale(${interpolate(s, [0, 1], [0.5, 1])})`, opacity: s }}><Mark size={150} /></div>
+      <div style={{ marginTop: 40, font: `800 96px ${T.sans}`, color: T.fog, letterSpacing: -4, textAlign: "center" }}>TurkmenAI <span style={{ color: T.signal }}>Local</span></div>
+      <div style={{ height: 4, width: interpolate(line, [0, 1], [0, 480]), background: T.signal, margin: "34px 0", boxShadow: `0 0 20px ${T.signal}` }} />
+      <div style={{ font: `500 42px ${T.sans}`, color: "#c3d2d3", textAlign: "center", opacity: interpolate(f, [20, 40], [0, 1], { extrapolateRight: "clamp" }) }}>{tri("tagline", lang)}</div>
+      <div style={{ marginTop: 24, ...mono(24, T.signal), letterSpacing: 5, opacity: interpolate(f, [30, 50], [0, 1], { extrapolateRight: "clamp" }) }}>{tri("kicker", lang)}</div>
     </AbsoluteFill>
   );
 };
 
-const Card: React.FC<{ children: React.ReactNode; delay: number; style?: React.CSSProperties }> = ({ children, delay, style }) => {
+const CTA: React.FC<{ lang: Lang }> = ({ lang }) => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const s = spring({ frame: f - delay, fps, config: { damping: 200 } });
-  return <div style={{ border: `1px solid ${T.line}`, background: T.panel2, padding: 24, opacity: s, transform: `translateY(${interpolate(s, [0, 1], [26, 0])}px)`, ...style }}>{children}</div>;
-};
-
-const label = { font: `700 15px ${T.mono}`, letterSpacing: 2, color: "#81969a" } as React.CSSProperties;
-
-const SceneHardware: React.FC<{ lang: Lang }> = ({ lang }) => (
-  <>
-    <Screen>
-      <div style={{ font: `800 40px ${T.sans}`, color: T.fog, letterSpacing: -1.5, marginBottom: 24 }}>{tri("s1title", lang)}</div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        {[["CPU", "your processor"], ["RAM", "detected locally"], ["GPU / VRAM", "if available"], ["DISK", "free space"]].map(([k, v], i) => (
-          <Card key={k} delay={10 + i * 7} style={{ minHeight: 150 }}>
-            <div style={label}>{k}</div>
-            <div style={{ marginTop: 34, font: `700 30px ${T.sans}`, color: T.fog }}>●●●</div>
-            <div style={{ marginTop: 8, font: `500 20px ${T.sans}`, color: "#9baeb2" }}>{v}</div>
-          </Card>
-        ))}
-      </div>
-    </Screen>
-    <Caption index="01" title={tri("s1title", lang)} body={tri("s1body", lang)} />
-  </>
-);
-
-const fitColors: Record<string, string> = { EXCELLENT: T.signal, GOOD: "#7fd1a0", USABLE: T.sand };
-const SceneCatalog: React.FC<{ lang: Lang }> = ({ lang }) => (
-  <>
-    <Screen>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 22 }}>
-        <div style={{ font: `800 40px ${T.sans}`, color: T.fog, letterSpacing: -1.5 }}>{tri("s2title", lang)}</div>
-        <div style={{ marginLeft: "auto", font: `700 15px ${T.mono}`, color: "#052228", background: T.signal, padding: "8px 11px", letterSpacing: 1 }}>LIVE · HF</div>
-      </div>
-      {[["Qwen2.5 3B Instruct", "chat", "EXCELLENT"], ["Whisper Small", "speech", "GOOD"], ["Gemma 2 2B", "chat", "EXCELLENT"], ["NLLB 600M", "translation", "USABLE"]].map(([name, cat, fit], i) => (
-        <Card key={name as string} delay={8 + i * 8} style={{ marginBottom: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ ...label, textTransform: "uppercase" }}>{cat}</div>
-            <div style={{ marginLeft: "auto", font: `700 14px ${T.mono}`, color: fitColors[fit as string], border: `1px solid ${fitColors[fit as string]}`, padding: "5px 8px" }}>{fit}</div>
-          </div>
-          <div style={{ marginTop: 12, font: `700 30px ${T.sans}`, color: T.fog }}>{name}</div>
-        </Card>
-      ))}
-    </Screen>
-    <Caption index="02" title={tri("s2title", lang)} body={tri("s2body", lang)} />
-  </>
-);
-
-const SceneInstall: React.FC<{ lang: Lang }> = ({ lang }) => {
-  const f = useCurrentFrame();
-  // Progress with a deliberate stall + resume around 55-70f to tell the resilience story.
-  const raw = interpolate(f, [30, 55, 70, 120], [0, 42, 42, 100], { extrapolateRight: "clamp", easing: Easing.inOut(Easing.quad) });
-  const pct = Math.round(raw);
-  const reconnecting = f > 55 && f < 72;
-  const done = pct >= 100;
-  return (
-    <>
-      <Screen>
-        <div style={{ font: `800 40px ${T.sans}`, color: T.fog, letterSpacing: -1.5, marginBottom: 22 }}>{tri("s2title", lang)}</div>
-        <Card delay={4}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ ...label, textTransform: "uppercase" }}>chat</div>
-            <div style={{ marginLeft: "auto", font: `700 14px ${T.mono}`, color: T.signal, border: `1px solid ${T.signal}`, padding: "5px 8px" }}>EXCELLENT</div>
-          </div>
-          <div style={{ marginTop: 12, font: `700 32px ${T.sans}`, color: T.fog }}>Qwen2.5 3B Instruct</div>
-          <div style={{ marginTop: 20, height: 12, background: "#12333a", borderRadius: 6, overflow: "hidden" }}>
-            <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(90deg, #00c2b8, ${T.signal})` }} />
-          </div>
-          <div style={{ marginTop: 14, display: "flex", gap: 20, font: `700 22px ${T.mono}`, color: "#8fb3b3" }}>
-            <span>{done ? tri("ready", lang) : `${pct}%`}</span>
-            {reconnecting ? <span style={{ color: "#e0a94a" }}>↻ {tri("reconnect", lang)}</span> : <span>{done ? tri("verified", lang) : "resumable · journaled"}</span>}
-          </div>
-          <button style={{ marginTop: 22, border: 0, background: done ? "#0c2a30" : T.signal, color: done ? T.signal : "#06232a", font: `800 24px ${T.sans}`, padding: "16px 22px", display: "flex", alignItems: "center", gap: 10 }}>
-            {done ? `✓ ${tri("ready", lang)}` : f > 30 ? `${tri("installing", lang)}…` : tri("install", lang)}
-          </button>
-        </Card>
-      </Screen>
-      {f < 30 && <Cursor from={[720, 1250]} to={[300, 1090]} clickAt={26} />}
-      <Caption index="03" title={done ? tri("s4title", lang) : tri("s3title", lang)} body={done ? tri("s4body", lang) : tri("s3body", lang)} />
-    </>
-  );
-};
-
-const SceneprivacyPill: React.FC<{ text: string; delay: number }> = ({ text, delay }) => {
-  const f = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const s = spring({ frame: f - delay, fps, config: { damping: 200 } });
-  return <div style={{ border: `1px solid ${T.signal}`, color: T.signal, font: `700 26px ${T.mono}`, letterSpacing: 2, padding: "16px 22px", opacity: s, transform: `scale(${interpolate(s, [0, 1], [0.8, 1])})` }}>{text}</div>;
-};
-
-const ScenePrivacy: React.FC<{ lang: Lang }> = ({ lang }) => (
-  <>
-    <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", gap: 26, paddingBottom: 520 }}>
-      <SceneprivacyPill text={tri("localApi", lang)} delay={6} />
-      <SceneprivacyPill text={tri("noTelemetry", lang)} delay={16} />
-      <SceneprivacyPill text={tri("offline", lang)} delay={26} />
-    </AbsoluteFill>
-    <Caption index="04" title={tri("s5title", lang)} body={tri("s5body", lang)} />
-  </>
-);
-
-const SceneCTA: React.FC<{ lang: Lang }> = ({ lang }) => {
-  const f = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const s = spring({ frame: f, fps, config: { damping: 200 } });
-  const pulse = 1 + 0.03 * Math.sin(f / 6);
+  const s = pop(f, fps);
+  const pulse = 1 + 0.035 * Math.sin(f / 5);
   return (
     <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", padding: 80 }}>
-      <div style={{ opacity: s, transform: `scale(${interpolate(s, [0, 1], [0.7, 1])})` }}><Mark size={120} /></div>
-      <div style={{ marginTop: 30, font: `800 74px ${T.sans}`, color: T.fog, letterSpacing: -3, textAlign: "center" }}>TurkmenAI <span style={{ color: T.signal }}>Local</span></div>
-      <div style={{ marginTop: 40, background: T.signal, color: "#04222a", font: `800 42px ${T.sans}`, padding: "26px 44px", transform: `scale(${pulse})` }}>{tri("cta", lang)}</div>
-      <div style={{ marginTop: 30, font: `700 40px ${T.mono}`, color: T.signal, letterSpacing: 2 }}>{tri("ctaUrl", lang)}</div>
-      <div style={{ marginTop: 18, font: `700 20px ${T.mono}`, color: T.muted, letterSpacing: 3 }}>v0.3.0 · WINDOWS · macOS · LINUX</div>
+      <div style={{ opacity: s, transform: `scale(${interpolate(s, [0, 1], [0.6, 1])})` }}><Mark size={130} /></div>
+      <div style={{ marginTop: 28, font: `800 78px ${T.sans}`, color: T.fog, letterSpacing: -3, textAlign: "center" }}>TurkmenAI <span style={{ color: T.signal }}>Local</span></div>
+      <div style={{ marginTop: 40, background: T.signal, color: "#04222a", font: `800 46px ${T.sans}`, padding: "26px 46px", borderRadius: 8, transform: `scale(${pulse})` }}>{tri("cta", lang)}</div>
+      <div style={{ marginTop: 30, ...mono(44, T.signal), letterSpacing: 2 }}>turkmenai.tech</div>
+      <div style={{ marginTop: 18, ...mono(22, T.muted), letterSpacing: 3 }}>WINDOWS · macOS · LINUX · v0.3.0</div>
     </AbsoluteFill>
   );
 };
 
-// ---------- timeline --------------------------------------------------------
-
-export const Tour: React.FC<{ lang: Lang }> = ({ lang }) => {
-  const s = FPS;
-  return (
-    <AbsoluteFill style={{ fontFamily: T.sans, background: T.ink }}>
-      <Bg />
-      <Sequence durationInFrames={4 * s}><Intro lang={lang} /></Sequence>
-      <Sequence from={4 * s} durationInFrames={6 * s}><SceneHardware lang={lang} /></Sequence>
-      <Sequence from={10 * s} durationInFrames={7 * s}><SceneCatalog lang={lang} /></Sequence>
-      <Sequence from={17 * s} durationInFrames={9 * s}><SceneInstall lang={lang} /></Sequence>
-      <Sequence from={26 * s} durationInFrames={8 * s}><ScenePrivacy lang={lang} /></Sequence>
-      <Sequence from={34 * s} durationInFrames={8 * s}><SceneCTA lang={lang} /></Sequence>
-      {/* progress rail */}
-      <ProgressRail />
-    </AbsoluteFill>
-  );
-};
+// ---- timeline (fast beats) -------------------------------------------------
 
 const ProgressRail: React.FC = () => {
   const f = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
   const w = interpolate(f, [0, durationInFrames], [0, 100]);
   return <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 6, background: "rgba(255,255,255,.06)" }}><div style={{ height: "100%", width: `${w}%`, background: T.signal }} /></div>;
+};
+
+export const Tour: React.FC<{ lang: Lang }> = ({ lang }) => {
+  const B = 100; // beat length in frames (~3.3s) — snappy
+  const start = 70; // after intro
+  const beats: { i: string; h: string; c: string; v: React.ReactNode }[] = [
+    { i: "01", h: tri("h_hw", lang), c: tri("c_hw", lang), v: <VisHardware /> },
+    { i: "02", h: tri("h_models", lang), c: tri("c_models", lang), v: <VisModels /> },
+    { i: "03", h: tri("h_data", lang), c: tri("c_data", lang), v: <VisDatasets /> },
+    { i: "04", h: tri("h_install", lang), c: tri("c_install", lang), v: <InstallCard lang={lang} resume={false} /> },
+    { i: "05", h: tri("h_resume", lang), c: tri("c_resume", lang), v: <InstallCard lang={lang} resume /> },
+    { i: "06", h: tri("h_private", lang), c: tri("c_private", lang), v: <VisPrivate /> },
+    { i: "07", h: tri("h_offline", lang), c: tri("c_offline", lang), v: <VisOffline /> },
+    { i: "08", h: tri("h_bench", lang), c: tri("c_bench", lang), v: <VisBench /> },
+    { i: "09", h: tri("h_lang", lang), c: tri("c_lang", lang), v: <VisLang /> },
+  ];
+  return (
+    <AbsoluteFill style={{ fontFamily: T.sans, background: T.ink }}>
+      <Bg />
+      <Sequence durationInFrames={start}><Intro lang={lang} /></Sequence>
+      {beats.map((b, idx) => (
+        <Sequence key={b.i} from={start + idx * B} durationInFrames={B}>
+          <Beat index={b.i} head={b.h} line={b.c}>{b.v}</Beat>
+        </Sequence>
+      ))}
+      <Sequence from={start + beats.length * B}><CTA lang={lang} /></Sequence>
+      <ProgressRail />
+    </AbsoluteFill>
+  );
 };
